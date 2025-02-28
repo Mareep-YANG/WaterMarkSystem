@@ -7,14 +7,14 @@ from pydantic import BaseModel, EmailStr
 from sqlalchemy.orm import Session
 
 from ..deps import get_current_active_user, get_db
+from ...models.user import User, APIKey
 from ...core.config import settings
 from ...core.security import (
-    create_access_token,
-    get_password_hash,
-    verify_password,
-    create_api_key
+	create_access_token,
+	get_password_hash,
+	verify_password,
+	create_api_key
 )
-from ...models.user import User, APIKey
 
 router = APIRouter()
 

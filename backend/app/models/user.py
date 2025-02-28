@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from uuid import uuid4
 
 from sqlalchemy import Column, String, DateTime, Boolean
@@ -15,8 +15,8 @@ class User(Base):
 	email = Column(String, unique=True, index=True, nullable=False)
 	hashed_password = Column(String, nullable=False)
 	is_active = Column(Boolean, default=True)
-	created_at = Column(DateTime, default=datetime.utcnow)
-	updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+	created_at = Column(DateTime, default=datetime.now(timezone.utc))
+	updated_at = Column(DateTime, default=datetime.now(timezone.utc), onupdate=datetime.now(timezone.utc))
 
 
 class APIKey(Base):
@@ -26,6 +26,6 @@ class APIKey(Base):
 	user_id = Column(UUID(as_uuid=True), nullable=False)
 	key_value = Column(String, unique=True, nullable=False)
 	description = Column(String, nullable=True)
-	created_at = Column(DateTime, default=datetime.utcnow)
+	created_at = Column(DateTime, default=datetime.now(timezone.utc))
 	expires_at = Column(DateTime, nullable=True)
 	is_active = Column(Boolean, default=True)
