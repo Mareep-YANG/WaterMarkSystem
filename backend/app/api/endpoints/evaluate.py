@@ -1,9 +1,9 @@
 from typing import Any, Dict, List
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from app.api.deps import get_auth_user, get_db
-from app.models.user import User
-from app.watermarks import get_watermark_algorithm
+from ..deps import get_auth_user, get_db
+from ...models.user import User
+from ...watermarks import get_watermark_algorithm
 from pydantic import BaseModel
 
 router = APIRouter()

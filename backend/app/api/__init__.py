@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from app.api.endpoints import auth, watermark, evaluate
+from .endpoints import auth, watermark, evaluate
 
 api_router = APIRouter()
 

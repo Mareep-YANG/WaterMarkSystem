@@ -3,9 +3,9 @@ from fastapi import Depends, HTTPException, Security, status
 from fastapi.security import OAuth2PasswordBearer, APIKeyHeader
 from jose import JWTError, jwt
 from sqlalchemy.orm import Session
-from app.core.config import settings
-from app.core.database import get_db
-from app.models.user import User, APIKey
+from ..core.config import settings
+from ..core.database import get_db
+from ..models.user import User, APIKey
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{settings.API_V1_STR}/auth/login")
 api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)

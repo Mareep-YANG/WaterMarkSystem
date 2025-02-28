@@ -6,7 +6,7 @@ from transformers import (
     LogitsProcessor,
     LogitsProcessorList,
 )
-from app.core.config import settings
+from .config import settings
 
 class LLMService:
     """LLM服务核心类"""

@@ -2,7 +2,7 @@ from datetime import datetime, timedelta
 from typing import Any, Union, Optional
 from jose import jwt
 from passlib.context import CryptContext
-from app.core.config import settings
+from .config import settings
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -32,4 +32,5 @@ def create_api_key() -> str:
 
 def verify_api_key(api_key: str, stored_key: str) -> bool:
     """验证API密钥"""
+    import secrets
     return secrets.compare_digest(api_key, stored_key)

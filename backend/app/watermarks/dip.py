@@ -93,7 +93,7 @@ class DIPWatermark(LogitsWatermark):
         Returns:
             检测结果
         """
-        from app.core.llm import llm_service
+        from ..core.llm import llm_service
         
         # 获取文本的logits分布
         logits = llm_service.get_logits(text)

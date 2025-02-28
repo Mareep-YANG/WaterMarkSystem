@@ -4,9 +4,9 @@ from sqlalchemy import pool
 from alembic import context
 
 # 引入模型，以便Alembic可以检测到它们
-from app.core.config import settings
-from app.core.database import Base
-from app.models.user import User  # 确保导入所有模型
+from ..app.core.config import settings
+from ..app.core.database import Base
+from ..app.models.user import User  # 确保导入所有模型
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
