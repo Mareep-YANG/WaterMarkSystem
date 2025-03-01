@@ -8,7 +8,7 @@ from transformers import (
 	LogitsProcessorList,
 )
 
-from .config import settings
+from .settings import settings
 
 
 class LLMService:
@@ -50,12 +50,12 @@ class LLMService:
 		self.processors = LogitsProcessorList()
 	
 	async def generate(
-			self,
-			prompt: str,
-			max_length: int = 100,
-			temperature: float = 0.7,
-			top_p: float = 0.9,
-			**kwargs
+		self,
+		prompt: str,
+		max_length: int = 100,
+		temperature: float = 0.7,
+		top_p: float = 0.9,
+		**kwargs
 	) -> str:
 		"""生成文本"""
 		if not self.model or not self.tokenizer:
@@ -64,10 +64,10 @@ class LLMService:
 		inputs = self.tokenizer(prompt, return_tensors="pt").to(self.device)
 		
 		generation_config = {
-			"max_length": max_length,
-			"temperature": temperature,
-			"top_p": top_p,
-			"do_sample": True,
+			"max_length"      : max_length,
+			"temperature"     : temperature,
+			"top_p"           : top_p,
+			"do_sample"       : True,
 			"logits_processor": self.processors if self.processors else None,
 			**kwargs
 		}
