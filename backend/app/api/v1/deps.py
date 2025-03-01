@@ -9,7 +9,7 @@ from ...core.settings import settings
 from ...database.base import get_db
 from ...models.user import APIKey, User
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{settings.API_V1_STR}/auth/login")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{settings.API_V1}/auth/login")
 api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
 
 
