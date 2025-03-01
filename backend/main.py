@@ -4,16 +4,18 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from api.v1.endpoints.users import api_router
-from core import settings
+from core import (
+	llm_service,
+	settings
+)
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-	"""启动时执行"""
-	print('启动！')
+	print('\033[7;37m启动！\033[0m')
+	# llm_service.load_model()
 	yield
-	"""关闭时执行""" # 可以在这里添加清理代码
-	print('关闭！')
+	print('\033[7;37m关闭！\033[0m')
 
 app = FastAPI(
 	title=settings.APP_NAME,
@@ -35,4 +37,4 @@ app.include_router(api_router, prefix=settings.API_V1)
 
 if __name__ == "__main__":
 	import uvicorn
-	uvicorn.run('main:app', host="0.0.0.0", port=8000, reload=True)
+	uvicorn.run('main:app', host="0.0.0.0", port=8000, reload=True, use_colors=True)

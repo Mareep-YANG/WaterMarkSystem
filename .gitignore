@@ -19,7 +19,6 @@ var/
 *.egg-info/
 .installed.cfg
 *.egg
-.env
 venv/
 
 # Node
@@ -45,7 +44,6 @@ Thumbs.db
 .cache/
 logs/
 *.log
-backend/.env
 frontend/.env.local
 
 # Database
@@ -54,7 +52,6 @@ frontend/.env.local
 *.db
 
 # Model cache
-backend/models/
 .cache/models/
 *.gguf
 *.bin
