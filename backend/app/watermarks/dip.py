@@ -113,11 +113,11 @@ class DIPWatermark(LogitsWatermark):
 		is_watermarked = torch.mean(similarity) > self.threshold
 		
 		return {
-			"detected"  : bool(is_watermarked),
+			"detected": bool(is_watermarked),
 			"confidence": float(torch.mean(similarity)),
-			"details"   : {
+			"details": {
 				"similarity_scores": similarity.tolist(),
-				"threshold"        : self.threshold
+				"threshold": self.threshold
 			}
 		}
 	
@@ -136,15 +136,15 @@ class DIPWatermark(LogitsWatermark):
 		return {
 			"type": "line_chart",
 			"data": {
-				"labels"  : list(range(len(similarity_scores))),
+				"labels": list(range(len(similarity_scores))),
 				"datasets": [
 					{
 						"label": "Similarity Scores",
-						"data" : similarity_scores,
+						"data": similarity_scores,
 					},
 					{
-						"label"     : "Threshold",
-						"data"      : [threshold] * len(similarity_scores),
+						"label": "Threshold",
+						"data": [threshold] * len(similarity_scores),
 						"borderDash": [5, 5]
 					}
 				]

@@ -1,10 +1,12 @@
 from typing import Any, Dict, List
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import (
+	APIRouter, Depends,
+	HTTPException, status
+)
 from pydantic import BaseModel
-from sqlalchemy.orm import Session
 
-from ..deps import get_auth_user, get_db
+from ..deps import get_auth_user
 from ....models.user import User
 from ....watermarks import get_watermark_algorithm
 
@@ -42,8 +44,7 @@ class AttackResponse(BaseModel):
 @router.post("/metrics", response_model=EvaluationResponse)
 async def evaluate_watermark(
 	request: EvaluationRequest,
-	current_user: User = Depends(get_auth_user),
-	db: Session = Depends(get_db)
+	current_user: User = Depends(get_auth_user)
 ) -> Any:
 	"""
 	评估水印算法性能
@@ -57,12 +58,16 @@ async def evaluate_watermark(
 		for metric_name in request.metrics:
 			if metric_name == "robustness":
 				# 鲁棒性评估
-				detection_before = watermark.detect(request.watermarked_text, request.key)
+				detection_before = watermark.detect(
+					request.watermarked_text, request.key
+				)
 				# 模拟一些文本变换
 				transformed_texts = [
 					request.watermarked_text.lower(),  # 转小写
 					" ".join(request.watermarked_text.split()),  # 空格标准化
-					request.watermarked_text[:len(request.watermarked_text) // 2]  # 截断
+					request.watermarked_text[
+					: len(request.watermarked_text) // 2
+					],  # 截断
 				]
 				detections_after = [
 					watermark.detect(text, request.key)["detected"]
@@ -71,41 +76,38 @@ async def evaluate_watermark(
 				robustness_score = sum(detections_after) / len(detections_after)
 				metrics_results["robustness"] = robustness_score
 				details["robustness"] = {
-					"transformations"      : len(transformed_texts),
-					"successful_detections": sum(detections_after)
+					"transformations": len(transformed_texts),
+					"successful_detections": sum(detections_after),
 				}
 			
 			elif metric_name == "quality":
 				# 文本质量评估
 				from nltk.translate.bleu_score import sentence_bleu
+				
 				bleu_score = sentence_bleu(
-					[request.original_text.split()],
-					request.watermarked_text.split()
+					[request.original_text.split()], request.watermarked_text.split()
 				)
 				metrics_results["quality"] = bleu_score
-				details["quality"] = {
-					"bleu_score": bleu_score
-				}
+				details["quality"] = {"bleu_score": bleu_score}
 			
 			elif metric_name == "security":
 				# 安全性评估
-				detection_result = watermark.detect(request.watermarked_text, request.key)
-				wrong_key_detection = watermark.detect(
-					request.watermarked_text,
-					request.key + "_wrong"
+				detection_result = watermark.detect(
+					request.watermarked_text, request.key
 				)
-				security_score = float(detection_result["detected"]) - \
-				                 float(wrong_key_detection["detected"])
+				wrong_key_detection = watermark.detect(
+					request.watermarked_text, request.key + "_wrong"
+				)
+				security_score = float(detection_result["detected"]) - float(
+					wrong_key_detection["detected"]
+				)
 				metrics_results["security"] = max(0, security_score)
 				details["security"] = {
-					"true_positive" : detection_result["detected"],
-					"false_positive": wrong_key_detection["detected"]
+					"true_positive": detection_result["detected"],
+					"false_positive": wrong_key_detection["detected"],
 				}
 		
-		return {
-			"metrics": metrics_results,
-			"details": details
-		}
+		return {"metrics": metrics_results, "details": details}
 	
 	except Exception as e:
 		raise HTTPException(
@@ -117,8 +119,7 @@ async def evaluate_watermark(
 @router.post("/attack", response_model=AttackResponse)
 async def attack_watermark(
 	request: AttackRequest,
-	current_user: User = Depends(get_auth_user),
-	db: Session = Depends(get_db)
+	current_user: User = Depends(get_auth_user)
 ) -> Any:
 	"""
 	对水印文本进行攻击测试
@@ -136,10 +137,8 @@ async def attack_watermark(
 			words = attacked_text.split()
 			# 示例：随机删除一些词
 			import random
-			attacked_text = " ".join(
-				word for word in words
-				if random.random() > 0.1
-			)
+			
+			attacked_text = " ".join(word for word in words if random.random() > 0.1)
 		
 		elif request.attack_type == "semantic":
 			# 语义层面攻击（例如改写）
@@ -159,12 +158,12 @@ async def attack_watermark(
 		
 		return {
 			"attacked_text": attacked_text,
-			"success_rate" : success_rate,
-			"details"      : {
+			"success_rate": success_rate,
+			"details": {
 				"original_detection": original_detection,
 				"attacked_detection": attacked_detection,
-				"attack_type"       : request.attack_type
-			}
+				"attack_type": request.attack_type,
+			},
 		}
 	
 	except Exception as e:
