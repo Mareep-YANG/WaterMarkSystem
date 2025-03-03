@@ -31,7 +31,12 @@ class SemStampWatermark(SemanticWatermark):
 		"""
 		获取文本的语义嵌入
 		"""
-		inputs = self.tokenizer(text, return_tensors="pt", padding=True, truncation=True)
+		inputs = self.tokenizer(
+			text,
+			return_tensors="pt",
+			padding=True,
+			truncation=True
+		)
 		if torch.cuda.is_available():
 			inputs = {k: v.cuda() for k, v in inputs.items()}
 		
@@ -107,10 +112,11 @@ class SemStampWatermark(SemanticWatermark):
 			chunk_embeddings.append(embedding)
 		
 		# 生成水印嵌入
-		watermark = self._generate_watermark_embedding(
-			key,
-			chunk_embeddings[0].shape[-1]
-		).to(chunk_embeddings[0].device)
+		watermark = (
+			self
+			._generate_watermark_embedding(key, chunk_embeddings[0].shape[-1])
+			.to(chunk_embeddings[0].device)
+		)
 		
 		# 计算相似度
 		similarities = []
@@ -123,12 +129,12 @@ class SemStampWatermark(SemanticWatermark):
 		is_watermarked = avg_similarity > self.threshold
 		
 		return {
-			"detected"  : bool(is_watermarked),
+			"detected": bool(is_watermarked),
 			"confidence": float(avg_similarity),
-			"details"   : {
+			"details": {
 				"chunk_similarities": similarities,
-				"chunks"            : chunks,
-				"threshold"         : self.threshold
+				"chunks": chunks,
+				"threshold": self.threshold
 			}
 		}
 	
@@ -141,16 +147,16 @@ class SemStampWatermark(SemanticWatermark):
 		threshold = detection_result["details"]["threshold"]
 		
 		return {
-			"type"       : "heatmap",
-			"data"       : {
-				"text_chunks" : chunks,
+			"type": "heatmap",
+			"data": {
+				"text_chunks": chunks,
 				"similarities": similarities,
-				"threshold"   : threshold
+				"threshold": threshold
 			},
 			"annotations": [
 				{
-					"chunk_index"   : i,
-					"similarity"    : sim,
+					"chunk_index": i,
+					"similarity": sim,
 					"is_watermarked": sim > threshold
 				}
 				for i, sim in enumerate(similarities)

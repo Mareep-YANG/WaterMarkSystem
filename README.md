@@ -14,6 +14,7 @@
 ## 技术栈
 
 ### 前端
+
 - Vue 3
 - TypeScript
 - Element Plus
@@ -22,28 +23,31 @@
 - ECharts
 
 ### 后端
+
 - Python FastAPI
-- SQLAlchemy
+- Tortoise-ORM
 - Transformers
 - PyJWT
-- PostgreSQL
+- MySQL
 
 ## 开发环境要求
 
 - Node.js >= 16.x
 - Python >= 3.9
-- PostgreSQL >= 12
+- MySQL >= 8.0
 - CUDA支持（可选，用于GPU加速）
 
 ## 安装步骤
 
 1. 克隆项目:
+
 ```bash
 git clone <repository-url>
 cd WaterMarkSystem
 ```
 
 2. 后端设置:
+
 ```bash
 # 创建Python虚拟环境
 cd backend
@@ -58,7 +62,7 @@ pip install -r requirements.txt
 
 # 设置环境变量
 # 创建.env文件并设置必要的环境变量，例如：
-# DATABASE_URL=postgresql://user:password@localhost:5432/watermark
+# DATABASE_URL=mysql://user:password@localhost:3306/watermark
 # SECRET_KEY=your-secret-key
 # etc.
 
@@ -67,6 +71,7 @@ alembic upgrade head
 ```
 
 3. 前端设置:
+
 ```bash
 cd frontend
 npm install
@@ -75,12 +80,14 @@ npm install
 ## 运行开发环境
 
 1. 启动后端服务:
+
 ```bash
 cd backend
 uvicorn main:app --reload --port 8000
 ```
 
 2. 启动前端服务:
+
 ```bash
 cd frontend
 npm run dev
@@ -95,6 +102,7 @@ npm run dev
 ## 主要功能使用说明
 
 ### 水印处理
+
 1. 登录系统
 2. 进入水印处理页面
 3. 选择水印算法
@@ -103,12 +111,14 @@ npm run dev
 6. 使用"检测水印"功能验证
 
 ### 评估功能
+
 1. 进入评估页面
 2. 输入原始文本和水印文本
 3. 选择评估指标
 4. 查看评估结果和可视化数据
 
 ### API使用
+
 1. 在个人中心创建API密钥
 2. 使用API密钥访问系统API
 3. 参考API文档进行集成
