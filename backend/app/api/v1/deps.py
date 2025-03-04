@@ -1,20 +1,33 @@
 from typing import Optional
 
-from fastapi import Depends, HTTPException, Security, status
-from fastapi.security import APIKeyHeader, OAuth2PasswordBearer
+from fastapi import (
+	Depends,
+	FastAPI,
+	HTTPException,
+	Security,
+	status
+)
+from fastapi.security import (
+	APIKeyHeader,
+	OAuth2PasswordBearer
+)
 from jose import jwt, JWTError
-from sqlalchemy.orm import Session
+from tortoise.contrib.fastapi import register_tortoise
+from tortoise.exceptions import DoesNotExist
 
-from ...core.settings import settings
-from ...database.base import get_db
+from ...core.cfg import cfg
 from ...models.user import APIKey, User
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{settings.API_V1}/auth/login")
-api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
+oauth2_scheme = OAuth2PasswordBearer(
+	tokenUrl=f"{cfg.API_V1}/auth/login"
+)
+api_key_header = APIKeyHeader(
+	name="X-API-Key",
+	auto_error=False
+)
 
 
 async def get_current_user(
-	db: Session = Depends(get_db),
 	token: str = Depends(oauth2_scheme)
 ) -> User:
 	"""
@@ -27,9 +40,8 @@ async def get_current_user(
 	)
 	try:
 		payload = jwt.decode(
-			token,
-			settings.SECRET_KEY,
-			algorithms=[settings.ALGORITHM]
+			token, cfg.SECRET_KEY,
+			algorithms=[cfg.ALGORITHM]
 		)
 		user_id: str = payload.get("sub")
 		if user_id is None:
@@ -37,28 +49,14 @@ async def get_current_user(
 	except JWTError:
 		raise credentials_exception
 	
-	user = db.query(User).filter(User.id == user_id).first()
-	if user is None:
+	try:
+		user = await User.get(id=user_id)
+	except DoesNotExist:
 		raise credentials_exception
 	return user
 
 
-async def get_current_active_user(
-	current_user: User = Depends(get_current_user),
-) -> User:
-	"""
-	获取当前活跃用户
-	"""
-	if not current_user.is_active:
-		raise HTTPException(
-			status_code=status.HTTP_400_BAD_REQUEST,
-			detail="Inactive user"
-		)
-	return current_user
-
-
 async def validate_api_key(
-	db: Session = Depends(get_db),
 	api_key: Optional[str] = Security(api_key_header)
 ) -> Optional[User]:
 	"""
@@ -67,19 +65,18 @@ async def validate_api_key(
 	if not api_key:
 		return None
 	
-	api_key_record = db.query(APIKey).filter(
-		APIKey.key_value == api_key,
-		APIKey.is_active == True
-	).first()
-	
-	if not api_key_record:
-		raise HTTPException(
-			status_code=status.HTTP_401_UNAUTHORIZED,
-			detail="Invalid API key"
+	try:
+		api_key_record = await APIKey.get(
+			key_value=api_key,
+			is_active=True
 		)
-	
-	user = db.query(User).filter(User.id == api_key_record.user_id).first()
-	if not user or not user.is_active:
+		user = await User.get(id=api_key_record.user_id)
+		if not user.is_active:
+			raise HTTPException(
+				status_code=status.HTTP_401_UNAUTHORIZED,
+				detail="Invalid API key"
+			)
+	except DoesNotExist:
 		raise HTTPException(
 			status_code=status.HTTP_401_UNAUTHORIZED,
 			detail="Invalid API key"
@@ -89,7 +86,7 @@ async def validate_api_key(
 
 
 async def get_auth_user(
-	current_user: Optional[User] = Security(get_current_active_user, scopes=[]),
+	current_user: Optional[User] = Depends(get_current_user),
 	api_key_user: Optional[User] = Depends(validate_api_key)
 ) -> User:
 	"""
@@ -102,4 +99,24 @@ async def get_auth_user(
 	raise HTTPException(
 		status_code=status.HTTP_401_UNAUTHORIZED,
 		detail="Authentication required"
+	)
+
+
+def get_current_active_user(
+	current_user: User = Depends(get_auth_user)
+):
+	if not current_user.is_active:
+		raise HTTPException(
+			status_code=400,
+			detail="Inactive user"
+		)
+	return current_user
+
+
+def init_db(app: FastAPI):
+	register_tortoise(
+		app=app,
+		config=cfg.TORTOISE_ORM,
+		# generate_schemas=True,  # 若db为空，自动创建表（生产环境勿开）
+		add_exception_handlers=True  # 生产环境勿开，会泄露调试信息
 	)

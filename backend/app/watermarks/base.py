@@ -79,7 +79,11 @@ class WatermarkLogitsProcessor(LogitsProcessor):
 		Returns:
 			处理后的logits分数
 		"""
-		return self.watermark.embed(scores, self.key, input_ids=input_ids, **kwargs)
+		return self.watermark.embed(
+			scores, self.key,
+			input_ids=input_ids,
+			**kwargs
+		)
 
 
 class LogitsWatermark(WatermarkBase):
@@ -110,12 +114,7 @@ class SemanticWatermark(WatermarkBase):
 	"""语义级水印基类"""
 	
 	@abstractmethod
-	def process_text(
-		self,
-		text: str,
-		key: str,
-		**kwargs
-	) -> str:
+	def process_text(self, text: str, key: str, **kwargs) -> str:
 		"""
 		处理文本实现水印
 		Args:
