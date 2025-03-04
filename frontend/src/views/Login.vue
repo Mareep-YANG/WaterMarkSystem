@@ -84,15 +84,40 @@ const rules = {
 
 const handleSubmit = async () => {
   if (!formRef.value) return;
-  
+
   try {
     await formRef.value.validate();
     loading.value = true;
-    
-    await userStore.login(formData.username, formData.password);
+
+    // 模拟网络延迟
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
+    // 开发环境模拟登录
+    if (import.meta.env.DEV) {
+      // 预设测试账号
+      const testCredentials = [
+        { username: "admin", password: "admin123" },
+        { username: "user", password: "user123" }
+      ];
+
+      const found = testCredentials.some(cred =>
+          cred.username === formData.username &&
+          cred.password === formData.password
+      );
+
+      if (!found) {
+        throw new Error('用户名或密码错误');
+      }
+
+      // 设置模拟token
+      localStorage.setItem('token', 'mock-token');
+      userStore.setToken("testtoken");
+    } else {
+      // 生产环境的真实请求
+      await userStore.login(formData.username, formData.password);
+    }
+
     ElMessage.success('登录成功');
-    
-    // 如果有重定向地址，则跳转到重定向地址
     const redirect = route.query.redirect as string;
     router.push(redirect || '/');
   } catch (error: any) {
@@ -101,6 +126,7 @@ const handleSubmit = async () => {
     loading.value = false;
   }
 };
+
 </script>
 
 <style scoped>
