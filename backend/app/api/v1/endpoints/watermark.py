@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 
 from ..deps import get_auth_user
-from ....core.llm import llm_service
+from ....core import llm_service
 from ....models.user import User
 from ....watermarks import get_watermark_algorithm, WATERMARK_ALGORITHMS
 

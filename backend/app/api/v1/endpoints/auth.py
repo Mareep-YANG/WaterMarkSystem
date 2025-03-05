@@ -10,7 +10,7 @@ from pydantic import BaseModel, EmailStr
 from tortoise.transactions import in_transaction
 
 from ..deps import get_current_active_user
-from ....core.cfg import cfg
+from ....core import cfg
 from ....core.security import (
 	create_access_token,
 	create_api_key,

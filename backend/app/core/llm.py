@@ -8,7 +8,7 @@ from transformers import (
 	LogitsProcessorList,
 )
 
-from .cfg import cfg
+from .config import cfg
 
 
 class LLMService:
