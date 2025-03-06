@@ -20,7 +20,7 @@ var/
 .installed.cfg
 *.egg
 venv/
-
+.env
 # Node
 node_modules/
 .npm
