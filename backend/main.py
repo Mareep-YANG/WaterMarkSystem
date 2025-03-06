@@ -3,7 +3,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import api_router, init_db
+from app.api.v1 import api_router, init_db
 from app.core import cfg, llm_service
 
 

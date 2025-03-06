@@ -15,7 +15,7 @@ from jose import jwt, JWTError
 from tortoise.contrib.fastapi import register_tortoise
 from tortoise.exceptions import DoesNotExist
 
-from ...core.cfg import cfg
+from ...core import cfg, TORTOISE_ORM
 from ...models.user import APIKey, User
 
 oauth2_scheme = OAuth2PasswordBearer(
@@ -40,7 +40,7 @@ async def get_current_user(
 	)
 	try:
 		payload = jwt.decode(
-			token, cfg.SECRET_KEY,
+			token, cfg.JWT_SECRET_KEY,
 			algorithms=[cfg.ALGORITHM]
 		)
 		user_id: str = payload.get("sub")
@@ -116,7 +116,7 @@ def get_current_active_user(
 def init_db(app: FastAPI):
 	register_tortoise(
 		app=app,
-		config=cfg.TORTOISE_ORM,
+		config=TORTOISE_ORM,
 		# generate_schemas=True,  # 若db为空，自动创建表（生产环境勿开）
 		add_exception_handlers=True  # 生产环境勿开，会泄露调试信息
 	)

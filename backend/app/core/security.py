@@ -4,7 +4,7 @@ from typing import Any, Optional, Union
 from jose import jwt
 from passlib.context import CryptContext
 
-from .cfg import cfg
+from .config import cfg
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -20,7 +20,7 @@ def create_access_token(
 		expire = datetime.now(timezone.utc) + timedelta(minutes=cfg.ACCESS_TOKEN_EXPIRE_MINUTES)
 	
 	to_encode = {"exp": expire, "sub": str(subject)}
-	encoded_jwt = jwt.encode(to_encode, cfg.SECRET_KEY, algorithm=cfg.ALGORITHM)
+	encoded_jwt = jwt.encode(to_encode, cfg.JWT_SECRET_KEY, algorithm=cfg.ALGORITHM)
 	return encoded_jwt
 
 
