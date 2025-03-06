@@ -61,10 +61,7 @@ source venv/bin/activate
 pip install -r requirements.txt
 
 # 设置环境变量
-# 创建.env文件并设置必要的环境变量，例如：
-# DATABASE_URL=mysql://user:password@localhost:3306/watermark
-# SECRET_KEY=your-secret-key
-# etc.
+# 创建.env文件并设置必要的环境变量
 
 # 初始化数据库
 alembic upgrade head
