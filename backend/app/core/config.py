@@ -90,9 +90,9 @@ def get_settings() -> Settings:
 	return Settings(
 		JWT_SECRET_KEY=os.environ['JWT_SECRET_KEY'],
 		SQL_HOST=os.environ['SQL_HOST'],
-		SQL_PORT=os.environ['SQL_PORT'],
+		SQL_PORT=int(os.environ['SQL_PORT']),
 		SQL_USER=os.environ['SQL_USER'],
-		SQL_PASSWORD=os.environ['SQL_PASSWORD'],
+		SQL_PASSWORD=SecretStr(os.environ['SQL_PASSWORD']),
 		SQL_DBNAME=os.environ['SQL_DBNAME']
 	)
 
