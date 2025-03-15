@@ -89,7 +89,7 @@ async def embed_watermark(
 			metadata = {"type": "logits"}
 		else:
 			# 语义级水印
-			watermarked_text = watermark.embed(request.text, request.key)
+			watermarked_text = ""
 			metadata = {"type": "semantic"}
 		
 		return {
@@ -144,7 +144,7 @@ async def visualize_watermark(
 		detection_result = watermark.detect(request.text, request.key)
 		
 		# 生成可视化数据
-		visualization_data = watermark.visualize(request.text, detection_result)
+		visualization_data = watermark.visualize(request.text, detection_result.get("details"))
 		
 		return visualization_data
 	

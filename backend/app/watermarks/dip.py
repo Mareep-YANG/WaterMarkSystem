@@ -1,307 +1,245 @@
-from hashlib import sha256
+import torch
+import hashlib
+import torch.nn.functional as F
+from math import sqrt
 from typing import Any, Dict
 
-import numpy as np
-import torch
-import torch.nn.functional as F
+from app.core import llm_service
+from app.watermarks import WatermarkBase, LogitsWatermark
 
-from .base import LogitsWatermark
+
+class WatermarkLogitsProcessor:
+    """Logits processor for watermarking"""
+
+    def __init__(self, watermark_instance, key):
+        self.watermark = watermark_instance
+        self.key = key
+
+    def __call__(self, input_ids, scores):
+        return self.watermark.embed(scores, self.key, input_ids=input_ids)
 
 
 class DIPWatermark(LogitsWatermark):
-    """Dynamic Identity Projection (DIP) 水印实现
+    """DiP watermarking algorithm implementation"""
 
-    本实现基于动态身份投影原理，通过将token logits投影到低维空间，
-    并向目标投影方向调整，在保留文本流畅性的同时嵌入可检测的水印。
-    """
-
-    def __init__(
-            self,
-            projection_dim: int = 128,
-            threshold: float = 0.5,
-            scale: float = 1.0,
-            gamma: float = 0.25  # 控制投影强度的参数
-    ):
-        """
-        初始化DIP水印
-
-        Args:
-            projection_dim: 投影空间维度
-            threshold: 水印检测阈值
-            scale: 水印强度缩放因子
-            gamma: 控制投影绿区比例的参数
-        """
-        self.projection_dim = projection_dim
-        self.threshold = threshold
-        self.scale = scale
+    def __init__(self, gamma=0.5, alpha=0.45, ignore_history_generation=False,
+                 ignore_history_detection=False, z_threshold=1.513, prefix_length=5):
+        """Initialize the DiP watermark parameters"""
         self.gamma = gamma
-        self.projection_cache = {}  # 缓存投影矩阵以提高性能
-
-    def _get_projection_matrix(self, key: str, vocab_size: int) -> torch.Tensor:
-        """
-        生成投影矩阵
-
-        Args:
-            key: 水印密钥
-            vocab_size: 词表大小
-
-        Returns:
-            投影矩阵
-        """
-        # 使用缓存避免重复计算
-        cache_key = f"{key}_{vocab_size}_{self.projection_dim}"
-        if cache_key in self.projection_cache:
-            return self.projection_cache[cache_key]
-
-        # 使用密钥生成随机种子
-        seed = int(sha256(key.encode()).hexdigest(), 16) % (2 ** 32)
-        rng = np.random.RandomState(seed)
-
-        # 生成随机投影矩阵并正规化
-        matrix = rng.randn(vocab_size, self.projection_dim)
-        matrix = matrix / np.sqrt(np.sum(matrix ** 2, axis=1, keepdims=True))
-
-        # 转换为torch tensor并缓存
-        result = torch.FloatTensor(matrix)
-        self.projection_cache[cache_key] = result
-        return result
-
-    def process_logits(
-            self,
-            logits: torch.FloatTensor,
-            input_ids: torch.LongTensor,
-            key: str,
-            **kwargs
-    ) -> torch.FloatTensor:
-        """
-        处理logits实现水印
-
-        Args:
-            logits: 原始logits [batch_size, seq_len, vocab_size]
-            input_ids: 输入token IDs
-            key: 水印密钥
-
-        Returns:
-            处理后的logits
-        """
-        batch_size, vocab_size = logits.shape[0], logits.shape[-1]
-        device = logits.device
-
-        # 从输入ID生成上下文相关密钥
-        context_key = key
-        if input_ids is not None and input_ids.size(0) > 0:
-            # 使用最后几个token作为上下文
-            context_suffix = "_" + "_".join([str(t.item()) for t in input_ids[0, -5:]])
-            context_key = key + context_suffix
-
-        # 生成投影矩阵并移至相应设备
-        proj_matrix = self._get_projection_matrix(context_key, vocab_size).to(device)
-
-        # 对logits进行softmax并投影
-        probs = F.softmax(logits, dim=-1)
-        projected = torch.matmul(probs, proj_matrix)
-
-        # 生成目标投影向量
-        target_key = context_key + "_target"
-        target_proj = self._get_projection_matrix(target_key, self.projection_dim).to(device)
-
-        # 计算每个词表位置的投影距离
-        token_directions = torch.matmul(proj_matrix, target_proj.T)  # [vocab_size, projection_dim]
-
-        # 根据投影距离调整logits
-        # 将距离转换为连续的加权因子
-        similarity_scores = F.normalize(token_directions, dim=1)
-
-        # 按照相似度划分绿区和红区
-        sorted_indices = torch.argsort(similarity_scores, dim=1, descending=True)
-        green_zone_size = int(vocab_size * self.gamma)
-
-        # 创建调整矩阵
-        adjustments = torch.zeros_like(logits)
-        for i in range(batch_size):
-            # 提高绿区token的概率
-            green_indices = sorted_indices[i, :green_zone_size]
-            adjustments[i, green_indices] = self.scale
-
-        # 应用调整
-        modified_logits = logits + adjustments
-        return modified_logits
+        self.alpha = alpha
+        self.ignore_history_generation = ignore_history_generation
+        self.ignore_history_detection = ignore_history_detection
+        self.z_threshold = z_threshold
+        self.prefix_length = prefix_length
+        self.cc_history = set()
+        self.state_indicator = 1  # 0 for generation, 1 for detection
 
     def embed(self, logits: Any, key: str, input_ids: Any) -> Any:
-        """
-        嵌入水印
+        """Embed watermark into logits"""
+        if input_ids.shape[-1] < self.prefix_length:
+            return logits
 
-        Args:
-            logits: 原始logits
-            key: 水印密钥
-            input_ids: 输入token IDs
+        hash_key = key.encode() if isinstance(key, str) else key
 
-        Returns:
-            处理后的logits
-        """
-        return self.process_logits(logits, input_ids, key)
+        # Extract context and get mask/seeds
+        batch_size = input_ids.size(0)
+        context_codes = [self._extract_context_code(input_ids[i], hash_key) for i in range(batch_size)]
 
-    def detect(self, text: str, key: str, tokenizer=None, model=None, **kwargs) -> Dict[str, Any]:
-        """
-        检测水印
+        mask, seeds = zip(*[(context_code in self.cc_history, self._get_rng_seed(context_code, hash_key))
+                            for context_code in context_codes])
 
-        Args:
-            text: 待检测文本
-            key: 水印密钥
-            tokenizer: 用于将文本转换为tokens的分词器
-            model: 用于获取logits的模型
+        # Generate permutation
+        rng = [torch.Generator(device=logits.device).manual_seed(seed) for seed in seeds]
+        mask = torch.tensor(mask, device=logits.device)
+        shuffle = self._from_random(rng, logits.size(1))
 
-        Returns:
-            检测结果
-        """
-        if not tokenizer or not model:
-            raise ValueError("检测水印需要提供tokenizer和model")
+        # Apply watermark
+        reweighted_logits = self._reweight_logits(shuffle, logits)
 
-        # 将文本转换为tokens
-        tokens = tokenizer(text, return_tensors="pt").to(model.device)
-        input_ids = tokens.input_ids
+        if self.ignore_history_generation:
+            return reweighted_logits
+        else:
+            return torch.where(mask[:, None], logits, reweighted_logits)
 
-        # 获取模型输出的logits
-        with torch.no_grad():
-            outputs = model(**tokens)
-            logits = outputs.logits[:, :-1, :]  # 排除最后一个位置的logits
-            actual_input_ids = input_ids[:, 1:]  # 排除第一个token
+    def detect(self, text: str, key: str, **kwargs) -> Dict[str, Any]:
+        """Detect watermark in text"""
+        self.state_indicator = 1  # Set to detection mode
 
-        batch_size, seq_len, vocab_size = logits.shape
-        device = logits.device
+        # Get tokenizer from kwargs
+        tokenizer = llm_service.tokenizer
 
-        # 统计绿区token的比例
-        green_tokens = 0
-        total_tokens = seq_len
-        similarity_scores = []
+        # Tokenize text
+        encoded_text = tokenizer(text, return_tensors="pt", add_special_tokens=False)["input_ids"][0].to(llm_service.device)
 
-        for i in range(seq_len):
-            # 为每个位置生成上下文相关密钥
-            if i < 5:
-                context_tokens = actual_input_ids[0, :i + 1]
-            else:
-                context_tokens = actual_input_ids[0, i - 4:i + 1]
+        # Calculate z-score
+        hash_key = key.encode() if isinstance(key, str) else key
+        z_score, green_token_flags = self._score_sequence(encoded_text, len(tokenizer), hash_key)
 
-            context_key = key + "_" + "_".join([str(t.item()) for t in context_tokens])
+        # Clear history
+        self.cc_history.clear()
 
-            # 获取该位置的logits和实际token
-            pos_logits = logits[0, i]
-            pos_token = actual_input_ids[0, i].item()
-
-            # 计算投影矩阵
-            proj_matrix = self._get_projection_matrix(context_key, vocab_size).to(device)
-
-            # 计算目标投影
-            target_key = context_key + "_target"
-            target_proj = self._get_projection_matrix(target_key, self.projection_dim).to(device)
-
-            # 计算每个token的方向与目标的相似度
-            token_directions = torch.matmul(proj_matrix, target_proj.T)
-
-            # 标准化并获取排序
-            similarity = F.normalize(token_directions, dim=1)
-            sorted_indices = torch.argsort(similarity, dim=0, descending=True)
-
-            # 检查实际token是否在绿区内
-            green_zone_size = int(vocab_size * self.gamma)
-            green_tokens_indices = sorted_indices[:green_zone_size].squeeze(-1)
-
-            is_green = pos_token in green_tokens_indices
-            if is_green:
-                green_tokens += 1
-
-            # 记录相似度得分
-            token_score = float(similarity[pos_token])
-            similarity_scores.append(token_score)
-
-        # 计算z-score
-        expected_green = self.gamma * total_tokens
-        variance = total_tokens * self.gamma * (1 - self.gamma)
-        z_score = (green_tokens - expected_green) / (np.sqrt(variance) + 1e-10)
-
-        # 判断是否检测到水印
-        is_watermarked = z_score > self.threshold
-
+        # Return detection results
+        is_watermarked = z_score > self.z_threshold
         return {
-            "detected": bool(is_watermarked),
-            "confidence": float(z_score),
-            "details": {
-                "green_tokens": green_tokens,
-                "total_tokens": total_tokens,
-                "green_ratio": green_tokens / total_tokens,
-                "expected_ratio": self.gamma,
-                "z_score": float(z_score),
-                "similarity_scores": similarity_scores,
-                "threshold": self.threshold
+            "detected": is_watermarked,
+            "confidence": z_score,
+            "details":{
+                "green_token_flags": green_token_flags
             }
+
         }
 
     def visualize(self, text: str, detection_result: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        可视化检测结果
+        """Visualize watermark detection results"""
+        tokenizer = llm_service.tokenizer
 
-        Args:
-            text: 原始文本
-            detection_result: 检测结果
+        # Tokenize text
+        encoded_text = tokenizer(text, return_tensors="pt", add_special_tokens=False)["input_ids"][0].to(llm_service.device)
 
-        Returns:
-            可视化数据
-        """
-        similarity_scores = detection_result["details"]["similarity_scores"]
-        threshold = detection_result["details"]["threshold"]
-        z_score = detection_result["details"]["z_score"]
+        # Get tokens
+        decoded_tokens = []
+        for token_id in encoded_text:
+            token = tokenizer.decode(token_id.item())
+            decoded_tokens.append(token)
 
-        # 为每个token分配颜色
-        tokenized_text = []
-        if "tokenizer" in detection_result:
-            tokenizer = detection_result["tokenizer"]
-            tokens = tokenizer.tokenize(text)
-            tokenized_text = tokens[:len(similarity_scores)]  # 确保长度匹配
+        # Use the green_token_flags from detection result
+        highlight_values = detection_result.get("green_token_flags", [])
 
-        # 构建可视化数据
         return {
-            "type": "combined",
-            "charts": [
-                {
-                    "type": "line_chart",
-                    "data": {
-                        "labels": list(range(len(similarity_scores))),
-                        "datasets": [
-                            {
-                                "label": "相似度得分",
-                                "data": similarity_scores,
-                                "borderColor": "rgba(75, 192, 192, 1)",
-                            },
-                            {
-                                "label": "阈值",
-                                "data": [threshold] * len(similarity_scores),
-                                "borderColor": "rgba(255, 99, 132, 1)",
-                                "borderDash": [5, 5]
-                            }
-                        ]
-                    }
-                },
-                {
-                    "type": "text_highlight",
-                    "data": {
-                        "text": text,
-                        "tokens": tokenized_text,
-                        "highlights": similarity_scores,
-                        "threshold": self.gamma,  # 使用gamma作为高亮阈值
-                        "colors": {
-                            "high": "rgba(75, 192, 192, 0.5)",  # 绿色
-                            "low": "rgba(255, 255, 255, 0)"  # 透明
-                        }
-                    }
-                },
-                {
-                    "type": "summary",
-                    "data": {
-                        "z_score": z_score,
-                        "threshold": threshold,
-                        "detected": detection_result["detected"],
-                        "confidence": detection_result["confidence"]
-                    }
-                }
-            ]
+            "tokens": decoded_tokens,
+            "highlight_values": highlight_values
         }
+
+    def get_processor(self, key: str) -> 'WatermarkLogitsProcessor':
+        """Return a logits processor for this watermark"""
+        return WatermarkLogitsProcessor(self, key)
+
+    # Helper methods
+    def _extract_context_code(self, context, hash_key):
+        """Extract context code from input"""
+        if self.prefix_length == 0:
+            return context.detach().cpu().numpy().tobytes()
+        else:
+            return context[-self.prefix_length:].detach().cpu().numpy().tobytes()
+
+    def _get_rng_seed(self, context_code, hash_key):
+        """Get random seed from context and key"""
+        if ((not self.ignore_history_generation and self.state_indicator == 0) or
+                (not self.ignore_history_detection and self.state_indicator == 1)):
+            self.cc_history.add(context_code)
+
+        m = hashlib.sha256()
+        m.update(context_code)
+        m.update(hash_key)
+
+        full_hash = m.digest()
+        seed = int.from_bytes(full_hash, "big") % (2 ** 32 - 1)
+        return seed
+
+    def _from_random(self, rng, vocab_size):
+        """Generate permutation from random number generator"""
+        if isinstance(rng, list):
+            batch_size = len(rng)
+            shuffle = torch.stack(
+                [torch.randperm(vocab_size, generator=rng[i], device=rng[i].device)
+                 for i in range(batch_size)]
+            )
+        else:
+            shuffle = torch.randperm(vocab_size, generator=rng, device=rng.device)
+        return shuffle
+
+    def _reweight_logits(self, shuffle, p_logits):
+        """Reweight logits using shuffle and alpha"""
+        unshuffle = torch.argsort(shuffle, dim=-1)
+
+        s_p_logits = torch.gather(p_logits, -1, shuffle)
+        s_log_cumsum = torch.logcumsumexp(s_p_logits, dim=-1)
+
+        # Normalize the log_cumsum
+        s_log_cumsum = s_log_cumsum - s_log_cumsum[..., -1:]
+        s_cumsum = torch.exp(s_log_cumsum)
+        s_p = F.softmax(s_p_logits, dim=-1)
+
+        boundary_1 = torch.argmax((s_cumsum > self.alpha).to(torch.int), dim=-1, keepdim=True)
+        p_boundary_1 = torch.gather(s_p, -1, boundary_1)
+        portion_in_right_1 = (torch.gather(s_cumsum, -1, boundary_1) - self.alpha) / p_boundary_1
+        portion_in_right_1 = torch.clamp(portion_in_right_1, 0, 1)
+        s_all_portion_in_right_1 = (s_cumsum > self.alpha).type_as(p_logits)
+        s_all_portion_in_right_1.scatter_(-1, boundary_1, portion_in_right_1)
+
+        boundary_2 = torch.argmax((s_cumsum > (1 - self.alpha)).to(torch.int), dim=-1, keepdim=True)
+        p_boundary_2 = torch.gather(s_p, -1, boundary_2)
+        portion_in_right_2 = (torch.gather(s_cumsum, -1, boundary_2) - (1 - self.alpha)) / p_boundary_2
+        portion_in_right_2 = torch.clamp(portion_in_right_2, 0, 1)
+        s_all_portion_in_right_2 = (s_cumsum > (1 - self.alpha)).type_as(p_logits)
+        s_all_portion_in_right_2.scatter_(-1, boundary_2, portion_in_right_2)
+
+        s_all_portion_in_right = s_all_portion_in_right_2 / 2 + s_all_portion_in_right_1 / 2
+        s_shift_logits = torch.log(s_all_portion_in_right)
+        shift_logits = torch.gather(s_shift_logits, -1, unshuffle)
+
+        return p_logits + shift_logits
+
+    def _get_green_token_quantile(self, input_ids, vocab_size, current_token, hash_key):
+        """Get vocab quantile of current token"""
+        mask, seeds = self._get_seed_for_cipher(input_ids.unsqueeze(0), hash_key)
+
+        rng = [torch.Generator(device=input_ids.device).manual_seed(seed) for seed in seeds]
+        mask = torch.tensor(mask, device=input_ids.device)
+        shuffle = self._from_random(rng, vocab_size)
+
+        token_quantile = [(torch.where(shuffle[0] == current_token)[0] + 1) / vocab_size]
+        return token_quantile, mask
+
+    def _get_seed_for_cipher(self, input_ids, hash_key):
+        """Get mask and seeds for cipher"""
+        batch_size = input_ids.size(0)
+        context_codes = [self._extract_context_code(input_ids[i], hash_key) for i in range(batch_size)]
+
+        mask, seeds = zip(*[(context_code in self.cc_history, self._get_rng_seed(context_code, hash_key))
+                            for context_code in context_codes])
+
+        return mask, seeds
+
+    def _get_dip_score(self, input_ids, vocab_size, hash_key):
+        """Get DiP score of input_ids"""
+        scores = torch.zeros(input_ids.shape, device=input_ids.device)
+
+        for i in range(input_ids.shape[-1] - 1):
+            pre = input_ids[:i + 1]
+            cur = input_ids[i + 1]
+            token_quantile, mask = self._get_green_token_quantile(pre, vocab_size, cur, hash_key)
+
+            # If current token is in history and ignore_history_detection is False, set score to -1
+            if not self.ignore_history_detection and mask[0]:
+                scores[i + 1] = -1
+            else:
+                scores[i + 1] = torch.stack(token_quantile).reshape(-1)
+
+        return scores
+
+    def _score_sequence(self, input_ids, vocab_size, hash_key):
+        """Score input_ids and return z_score and green_token_flags"""
+        score = self._get_dip_score(input_ids, vocab_size, hash_key)
+
+        green_tokens = torch.sum(score >= self.gamma, dim=-1, keepdim=False)
+        green_token_flags = torch.zeros_like(score)
+        condition_indices = torch.nonzero(score >= self.gamma, as_tuple=False).reshape(-1)
+        green_token_flags[condition_indices] = 1
+        green_token_flags[:self.prefix_length] = -1
+
+        # Calculate z-score based on whether to ignore history
+        if not self.ignore_history_detection:
+            ignored_indices = torch.nonzero(score == -1, as_tuple=False).reshape(-1)
+
+            # Mark ignored tokens
+            green_token_flags[ignored_indices] = -1
+
+            # Calculate z-score excluding ignored tokens
+            sequence_length_for_calculation = input_ids.size(-1) - ignored_indices.size(0)
+            z_score = (green_tokens - (1 - self.gamma) * sequence_length_for_calculation) / sqrt(
+                sequence_length_for_calculation)
+        else:
+            z_score = (green_tokens - (1 - self.gamma) * input_ids.size(-1)) / sqrt(input_ids.size(-1))
+
+        return z_score.item(), green_token_flags.tolist()

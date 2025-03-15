@@ -29,8 +29,8 @@ class LLMService:
 			# 获取可用设备
 			if torch.cuda.is_available():
 				self.device = "cuda"
-			elif hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
-				self.device = "mps"
+	#		elif hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
+	#			self.device = "mps" 某些算法的计算过程不允许使用MPS
 			else:
 				self.device = "cpu"
 	

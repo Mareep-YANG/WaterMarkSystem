@@ -14,18 +14,18 @@ class WatermarkBase(ABC):
 		"""
 		嵌入水印
 		Args:
-			text_or_logits: 文本或logits
+			logits: 文本或logits
 			key: 水印密钥
-			**kwargs: 其他参数
+			input_ids: token
 		Returns:
-			包含水印的文本或处理后的logits
+			包含处理后的logits
 		"""
 		pass
 	
 	@abstractmethod
 	def detect(self, text: str, key: str, **kwargs) -> Dict[str, Any]:
 		"""
-		检测水印
+		检测水印,模型和分词器从从llmservice
 		Args:
 			text: 待检测文本
 			key: 水印密钥
@@ -46,16 +46,6 @@ class WatermarkBase(ABC):
 			可视化数据
 		"""
 		pass
-	
-	def get_processor(self, key: str) -> 'WatermarkLogitsProcessor':
-		"""
-		获取对应的LogitsProcessor实现
-		Args:
-			key: 水印密钥
-		Returns:
-			LogitsProcessor实例
-		"""
-		return WatermarkLogitsProcessor(self, key)
 
 
 class WatermarkLogitsProcessor(LogitsProcessor):
@@ -87,26 +77,17 @@ class WatermarkLogitsProcessor(LogitsProcessor):
 
 class LogitsWatermark(WatermarkBase):
 	"""Logits级水印基类"""
-	
+
 	@abstractmethod
-	def process_logits(
-		self,
-		logits: torch.FloatTensor,
-		input_ids: torch.LongTensor,
-		key: str,
-		**kwargs
-	) -> torch.FloatTensor:
+	def get_processor(self, key: str) -> 'WatermarkLogitsProcessor':
 		"""
-		处理logits实现水印
+		获取对应的LogitsProcessor实现
 		Args:
-			logits: 原始logits
-			input_ids: 输入token IDs
 			key: 水印密钥
-			**kwargs: 其他参数
 		Returns:
-			处理后的logits
+			LogitsProcessor实例
 		"""
-		pass
+		return WatermarkLogitsProcessor(self, key)
 
 
 class SemanticWatermark(WatermarkBase):
