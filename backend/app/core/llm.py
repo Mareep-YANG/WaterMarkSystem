@@ -22,11 +22,17 @@ class LLMService:
 	
 	def __init__(self):
 		if not hasattr(self, 'initialized'):
-			self.device = "cuda" if torch.cuda.is_available() else "cpu"
 			self.model = None
 			self.tokenizer = None
 			self.processors = LogitsProcessorList()
 			self.initialized = True
+			# 获取可用设备
+			if torch.cuda.is_available():
+				self.device = "cuda"
+			elif hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
+				self.device = "mps"
+			else:
+				self.device = "cpu"
 	
 	def load_model(self, model_name: Optional[str] = None):
 		"""加载模型"""

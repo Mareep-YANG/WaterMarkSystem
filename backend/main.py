@@ -1,7 +1,10 @@
+import logging
+import traceback
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.responses import JSONResponse
 
 from app.api.v1 import api_router, init_db
 from app.core import cfg, llm_service
@@ -21,8 +24,10 @@ app = FastAPI(
 	title=cfg.APP_NAME,
 	version=cfg.VERSION,
 	openapi_url=f"{cfg.API_V1}/openapi.json",
-	lifespan=lifespan
+	lifespan=lifespan,
+	debug=cfg.DEBUG,
 )
+
 
 if cfg.CORS_ORIGINS:
 	app.add_middleware(

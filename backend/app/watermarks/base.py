@@ -1,3 +1,4 @@
+import logging
 from abc import ABC, abstractmethod
 from typing import Any, Dict
 
@@ -9,7 +10,7 @@ class WatermarkBase(ABC):
 	"""水印算法基类"""
 	
 	@abstractmethod
-	def embed(self, text_or_logits: Any, key: str, **kwargs) -> Any:
+	def embed(self, logits: Any, key: str,input_ids: Any) -> Any:
 		"""
 		嵌入水印
 		Args:
@@ -67,8 +68,7 @@ class WatermarkLogitsProcessor(LogitsProcessor):
 	def __call__(
 		self,
 		input_ids: torch.LongTensor,
-		scores: torch.FloatTensor,
-		**kwargs
+		scores: torch.FloatTensor
 	) -> torch.FloatTensor:
 		"""
 		处理token logits
@@ -82,7 +82,6 @@ class WatermarkLogitsProcessor(LogitsProcessor):
 		return self.watermark.embed(
 			scores, self.key,
 			input_ids=input_ids,
-			**kwargs
 		)
 
 

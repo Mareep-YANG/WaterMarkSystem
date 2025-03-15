@@ -14,7 +14,7 @@ class Settings(BaseSettings):
 	APP_NAME: str = "Watermark System"
 	VERSION: str = "1.0.0"
 	API_V1: str = "/api/v1"
-	
+	DEBUG: bool = False
 	# 安全设置
 	CORS_ORIGINS: List[AnyHttpUrl] = []
 	JWT_SECRET_KEY: str
@@ -29,7 +29,7 @@ class Settings(BaseSettings):
 	SQL_DBNAME: str
 	
 	# 模型配置
-	MODEL_PATH: str = "gpt2"
+	MODEL_PATH: str = "facebook/opt-1.3b"
 	MODEL_CACHE_DIR: str = ".cache/models"
 	
 	class Config:
