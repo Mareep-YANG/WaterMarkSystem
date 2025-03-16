@@ -1,0 +1,31 @@
+''' aerich工具-迁移指令-代码版 '''
+
+from aerich import Command
+from config import settings
+from tortoise import Tortoise
+async def init_db():
+    # settings.TORTOISE_ORM参考第4节
+    command = Command(tortoise_config=settings.TORTOISE_ORM)
+    # try:
+    #     await command.init_db(safe=True)
+    # except FileExistsError:
+    #     pass
+
+    await command.init()  # 对应aerich init -t
+    try:
+        await command.init_db(safe=True)  # 对应aerich init-db
+    except FileExistsError:
+        pass
+    try:
+        await command.migrate()  # 对应aerich migrate
+    except AttributeError:
+        pass
+
+    await command.upgrade(run_in_transaction=True)  # 对应aerich upgrade
+
+async def lifespan():
+    await init_db()
+    await Tortoise.close_connections()  # 执行完成后 关闭Tortoise连接，即关闭数据库连接，像sqlite shm wal文件才会消失，不可直接删除，否则数据库没有数据
+
+import asyncio
+asyncio.run(lifespan())

@@ -4,7 +4,7 @@ from .semstamp import SemStampWatermark
 
 # 注册可用的水印算法
 WATERMARK_ALGORITHMS = {
-	"dip"     : DIPWatermark,
+	"dip": DIPWatermark,
 	"semstamp": SemStampWatermark,
 }
 

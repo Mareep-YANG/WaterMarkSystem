@@ -1,31 +1,29 @@
 from datetime import datetime, timezone
 from uuid import uuid4
 
-from sqlalchemy import Boolean, Column, DateTime, String
-from sqlalchemy.dialects.postgresql import UUID
-
-from ..database.base import Base
+from tortoise import fields
+from tortoise.models import Model
 
 
-class User(Base):
-	__tablename__ = "users"
+class User(Model):
+	id = fields.IntField(pk=True)
+	username = fields.CharField(max_length=50, unique=True)
+	email = fields.CharField(max_length=255, unique=True)
+	hashed_password = fields.CharField(max_length=255)
+	is_active = fields.BooleanField(default=True)
 	
-	id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
-	username = Column(String, unique=True, index=True, nullable=False)
-	email = Column(String, unique=True, index=True, nullable=False)
-	hashed_password = Column(String, nullable=False)
-	is_active = Column(Boolean, default=True)
-	created_at = Column(DateTime, default=datetime.now(timezone.utc))
-	updated_at = Column(DateTime, default=datetime.now(timezone.utc), onupdate=datetime.now(timezone.utc))
+	class Meta:
+		table = "users"
 
 
-class APIKey(Base):
-	__tablename__ = "api_keys"
+class APIKey(Model):
+	id = fields.UUIDField(pk=True, default=uuid4)
+	user_id = fields.UUIDField(null=False)
+	key_value = fields.CharField(max_length=255, unique=True, null=False)
+	description = fields.CharField(max_length=255, null=True)
+	created_at = fields.DatetimeField(default=datetime.now(timezone.utc))
+	expires_at = fields.DatetimeField(null=True)
+	is_active = fields.BooleanField(default=True)
 	
-	id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
-	user_id = Column(UUID(as_uuid=True), nullable=False)
-	key_value = Column(String, unique=True, nullable=False)
-	description = Column(String, nullable=True)
-	created_at = Column(DateTime, default=datetime.now(timezone.utc))
-	expires_at = Column(DateTime, nullable=True)
-	is_active = Column(Boolean, default=True)
+	class Meta:
+		table = "api_keys"

@@ -2,10 +2,9 @@ from typing import Any, Dict, List
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
-from sqlalchemy.orm import Session
 
-from ..deps import get_auth_user, get_db
-from ....core.llm import llm_service
+from ..deps import get_auth_user
+from ....core import llm_service
 from ....models.user import User
 from ....watermarks import get_watermark_algorithm, WATERMARK_ALGORITHMS
 
@@ -54,10 +53,10 @@ async def list_algorithms() -> Any:
 		algo = algo_class()
 		algorithms.append(
 			{
-				"name"       : name,
+				"name": name,
 				"description": algo.__doc__ or "No description available",
-				"type"       : "logits" if hasattr(algo, "process_logits") else "semantic",
-				"params"     : {
+				"type": "logits" if hasattr(algo, "process_logits") else "semantic",
+				"params": {
 					# 这里可以添加算法支持的参数说明
 					# 例如DIP的projection_dim, threshold等
 				}
@@ -70,7 +69,6 @@ async def list_algorithms() -> Any:
 async def embed_watermark(
 	request: WatermarkRequest,
 	current_user: User = Depends(get_auth_user),
-	db: Session = Depends(get_db)
 ) -> Any:
 	"""
 	嵌入水印
@@ -93,7 +91,7 @@ async def embed_watermark(
 		
 		return {
 			"watermarked_text": watermarked_text,
-			"metadata"        : metadata
+			"metadata": metadata
 		}
 	
 	except Exception as e:
@@ -107,7 +105,6 @@ async def embed_watermark(
 async def detect_watermark(
 	request: DetectionRequest,
 	current_user: User = Depends(get_auth_user),
-	db: Session = Depends(get_db)
 ) -> Any:
 	"""
 	检测水印
@@ -132,7 +129,6 @@ async def detect_watermark(
 async def visualize_watermark(
 	request: DetectionRequest,
 	current_user: User = Depends(get_auth_user),
-	db: Session = Depends(get_db)
 ) -> Any:
 	"""
 	可视化水印检测结果

@@ -8,7 +8,7 @@ from transformers import (
 	LogitsProcessorList,
 )
 
-from .settings import settings
+from .config import cfg
 
 
 class LLMService:
@@ -30,14 +30,14 @@ class LLMService:
 	
 	def load_model(self, model_name: Optional[str] = None):
 		"""加载模型"""
-		model_name = model_name or settings.MODEL_PATH
+		model_name = model_name or cfg.MODEL_PATH
 		self.model = AutoModelForCausalLM.from_pretrained(
 			model_name,
-			cache_dir=settings.MODEL_CACHE_DIR
+			cache_dir=cfg.MODEL_CACHE_DIR
 		).to(self.device)
 		self.tokenizer = AutoTokenizer.from_pretrained(
 			model_name,
-			cache_dir=settings.MODEL_CACHE_DIR
+			cache_dir=cfg.MODEL_CACHE_DIR
 		)
 		return self
 	
@@ -64,16 +64,19 @@ class LLMService:
 		inputs = self.tokenizer(prompt, return_tensors="pt").to(self.device)
 		
 		generation_config = {
-			"max_length"      : max_length,
-			"temperature"     : temperature,
-			"top_p"           : top_p,
-			"do_sample"       : True,
+			"max_length": max_length,
+			"temperature": temperature,
+			"top_p": top_p,
+			"do_sample": True,
 			"logits_processor": self.processors if self.processors else None,
 			**kwargs
 		}
 		
 		outputs = self.model.generate(**inputs, **generation_config)
-		return self.tokenizer.decode(outputs[0], skip_special_tokens=True)
+		return self.tokenizer.decode(
+			outputs[0],
+			skip_special_tokens=True
+		)
 	
 	async def get_logits(self, text: str) -> torch.Tensor:
 		"""获取文本的logits分布"""
