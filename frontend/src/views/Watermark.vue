@@ -31,7 +31,7 @@
                 v-model="formData.text"
                 type="textarea"
                 :rows="6"
-                placeholder="请输入要处理的文本"
+                placeholder="请输入Prompt"
               />
             </el-form-item>
 

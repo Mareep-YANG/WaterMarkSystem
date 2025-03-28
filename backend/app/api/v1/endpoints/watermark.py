@@ -57,7 +57,7 @@ async def list_algorithms() -> Any:
 			{
 				"name": name,
 				"description": algo.__doc__ or "No description available",
-				"type": "logits" if isinstance(algo,LogitsWatermark) else "semantic",
+				"type": "logits" if hasattr(algo,"get_processor") else "semantic",
 				"params": {
 					# 这里可以添加算法支持的参数说明
 					# 例如DIP的projection_dim, threshold等

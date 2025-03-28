@@ -1,7 +1,7 @@
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
 import { ElMessage } from 'element-plus';
 
-const baseURL = 'http://localhost:8000/api';
+const baseURL = 'http://localhost:8000/api/v1';
 
 class Request {
   private instance: AxiosInstance;

@@ -34,7 +34,7 @@ class LLMService:
 			else:
 				self.device = "cpu"
 	
-	def load_model(self, model_name: Optional[str] = None):
+	async def load_model(self, model_name: Optional[str] = None):
 		"""加载模型"""
 		model_name = model_name or cfg.MODEL_PATH
 		self.model = AutoModelForCausalLM.from_pretrained(
