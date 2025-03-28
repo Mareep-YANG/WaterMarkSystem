@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from . import auth, evaluate, watermark
+from . import auth, evaluate, watermark,dataset
 
 api_router = APIRouter()
 
@@ -20,4 +20,10 @@ api_router.include_router(
 	watermark.router,
 	prefix="/watermark",
 	tags=["watermark"]
+)
+
+api_router.include_router(
+	dataset.router,
+	prefix="/dataset",
+	tags=["dataset"]
 )
