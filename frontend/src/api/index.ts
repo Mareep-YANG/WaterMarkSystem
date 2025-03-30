@@ -1,5 +1,22 @@
 import request from '@/utils/request';
 
+// 模型接口定义
+export interface Model {
+  id: string;
+  name: string;
+  description?: string;
+  size?: string;
+  status?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+export interface ModelImportParams {
+  name: string;
+  description?: string;
+  file_path?: string;
+  url?: string;
+}
+
 // 认证相关接口
 export const auth = {
   // 用户注册
@@ -77,8 +94,32 @@ export const evaluate = {
   }) => request.post('/evaluate/attack', data),
 };
 
+// 模型管理相关接口
+export const models = {
+  // 获取所有模型
+  getModels: () => request.get<{models: Model[]}>('/models'),
+  
+  // 获取模型详情
+  getModelById: (id: string) => request.get<Model>(`/models/${id}`),
+  
+  // 下载模型
+  downloadModel: (id: string) => request.get<{download_url: string}>(`/models/${id}/download`),
+  
+  // 从本地文件导入模型
+  importModelFromFile: (params: ModelImportParams) => 
+    request.post<Model>('/models/import', params),
+  
+  // 从URL导入模型
+  importModelFromUrl: (params: ModelImportParams) => 
+    request.post<Model>('/models/import-from-url', params),
+  
+  // 删除模型
+  deleteModel: (id: string) => request.delete<{success: boolean}>(`/models/${id}`),
+};
+
 export default {
   auth,
   watermark,
   evaluate,
+  models,
 };

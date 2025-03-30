@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory, RouteRecordRaw } from 'vue-router'; // 引入Vue Router的相关函数和类型
 
+
 const routes: RouteRecordRaw[] = [
   {
     path: '/',
@@ -30,6 +31,15 @@ const routes: RouteRecordRaw[] = [
     name: 'Evaluate',
     component: () => import('@/views/Evaluate.vue'), // 懒加载Evaluate组件
     meta: { requiresAuth: true } // 需要认证的页面
+  },
+  {
+    path: '/models',
+    name: 'ModelManagement',
+    component: () => import('@/views/ModelManagement.vue'), // 懒加载model组件
+    meta: {
+      title: 'Model Management',
+       requiresAuth: true 
+    } // 需要认证的页面
   },
   {
     path: '/profile',
