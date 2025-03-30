@@ -86,12 +86,61 @@
         </el-card>
       </el-col>
     </el-row>
+    <!-- 模型调用和数据集管理两个卡片 -->
+    <el-row :gutter="20" class="mt-20" justify="center">
+      <el-col :span="8"><!-- 使用Element UI的el-col组件，设置列宽度为8 -->
+        <el-card class="feature-card"><!-- 功能卡片 -->
+          <template #header><!-- 头部模板区域 -->
+            <div class="feature-header">
+              <el-icon><Cpu /></el-icon><!-- 图标 -->
+              <span>模型调用</span><!-- 功能名称 -->
+            </div>
+          </template>
+          <div class="feature-content">
+            <p>强大的模型管理功能：</p><!-- 功能描述 -->
+            <ul>
+              <li>多种模型支持</li>
+              <li>批量处理能力</li>
+              <li>模型性能监控</li>
+              <li>自定义参数配置</li>
+              <li>模型版本管理</li>
+            </ul>
+            <el-button type="primary" @click="router.push('/models')"><!-- 跳转按钮 -->
+              调用模型
+            </el-button>
+          </div>
+        </el-card>
+      </el-col>
+      <el-col :span="8"><!-- 使用Element UI的el-col组件，设置列宽度为8 -->
+        <el-card class="feature-card"><!-- 功能卡片 -->
+          <template #header><!-- 头部模板区域 -->
+            <div class="feature-header">
+              <el-icon><Collection /></el-icon><!-- 图标 -->
+              <span>数据集管理</span><!-- 功能名称 -->
+            </div>
+          </template>
+          <div class="feature-content">
+            <p>完整的数据集工具：</p><!-- 功能描述 -->
+            <ul>
+              <li>数据集导入导出</li>
+              <li>数据预处理</li>
+              <li>数据可视化分析</li>
+              <li>自动标注功能</li>
+              <li>数据质量评估</li>
+            </ul>
+            <el-button type="primary" @click="router.push('/dataset')"><!-- 跳转按钮 -->
+              管理数据集
+            </el-button>
+          </div>
+        </el-card>
+      </el-col>
+    </el-row>
   </div>
 </template>
 
 <script setup lang="ts">
 import { useRouter } from 'vue-router'; // 引入Vue Router的useRouter函数
-import { Document, DataAnalysis, Connection } from '@element-plus/icons-vue'; // 引入Element Plus的图标
+import { Document, DataAnalysis, Connection, Cpu } from '@element-plus/icons-vue'; // 引入Element Plus的图标
 
 const router = useRouter(); // 获取路由实例
 </script>

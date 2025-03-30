@@ -3,18 +3,11 @@ import request from '@/utils/request';
 // 模型接口定义
 export interface Model {
   id: string;
-  name: string;
+  model_name: string;
   description?: string;
-  size?: string;
-  status?: string;
+  is_loaded?: boolean;
   created_at?: string;
   updated_at?: string;
-}
-export interface ModelImportParams {
-  name: string;
-  description?: string;
-  file_path?: string;
-  url?: string;
 }
 
 // 认证相关接口
@@ -97,24 +90,25 @@ export const evaluate = {
 // 模型管理相关接口
 export const models = {
   // 获取所有模型
-  getModels: () => request.get<{models: Model[]}>('/models'),
+  getModels: () => request.get<{models: Model[]}>('/api/v1/model/models'),
   
   // 获取模型详情
-  getModelById: (id: string) => request.get<Model>(`/models/${id}`),
+  getModelById: (id: string) => request.get<Model>(`/model/${id}`),
   
-  // 下载模型
-  downloadModel: (id: string) => request.get<{download_url: string}>(`/models/${id}/download`),
+  // 更新模型
+  updateModel: (id: string, data: Model) => request.put(`/api/v1/model/${id}`, data),
   
+  // 添加新的 Huggingface 模型
+  addModel: (data: { model_name: string; description: string }) => request.post('/api/v1/model/addmodel', data),
+
   // 从本地文件导入模型
-  importModelFromFile: (params: ModelImportParams) => 
-    request.post<Model>('/models/import', params),
+  loadModel: (id: string) => request.post(`/api/v1/model/${id}/load`),
   
-  // 从URL导入模型
-  importModelFromUrl: (params: ModelImportParams) => 
-    request.post<Model>('/models/import-from-url', params),
+  // 生成文本
+  generateText: (id: string, data: { text: string; algorithm: string; key: string; attacktype: string; attackparams?: Record<string, any> }) => request.post(`/api/v1/model/${id}/generate`, data),
   
   // 删除模型
-  deleteModel: (id: string) => request.delete<{success: boolean}>(`/models/${id}`),
+  deleteModel: (id: string) => request.delete(`/api/v1/model/${id}`),
 };
 
 export default {
