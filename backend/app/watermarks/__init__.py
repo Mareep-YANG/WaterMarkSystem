@@ -1,7 +1,11 @@
 from .base import LogitsWatermark, SemanticWatermark, WatermarkBase
 from .dip import DIPWatermark
 from .semstamp import SemStampWatermark
-
+# 定义各算法的类型
+WATERMARK_TYPES = {
+    "dip": "logits",
+    # "semstamp": "semantic",
+}
 # 注册可用的水印算法
 WATERMARK_ALGORITHMS = {
 	"dip": DIPWatermark,

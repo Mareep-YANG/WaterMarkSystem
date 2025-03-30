@@ -2,7 +2,7 @@
   <el-config-provider :locale="zhCn">
     <div class="app-wrapper">
       <router-view v-slot="{ Component }">
-        <transition name="fade" mode="out-in">
+        <transition name="fade">
           <component :is="Component" />
         </transition>
       </router-view>
@@ -20,4 +20,5 @@ import './assets/styles/index.css'
   height: 100%;
   width: 100%;
 }
+
 </style>

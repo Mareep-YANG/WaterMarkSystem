@@ -49,15 +49,15 @@ async def list_algorithms() -> Any:
 	# 水印列表
 	algorithms = []
 	for name, algo_class in WATERMARK_ALGORITHMS.items(): # 遍历水印包获取水印算法
-		algo = algo_class()
 		algorithms.append(
 			{
 				"name": name,
-				"description": algo.__doc__ or "No description available",
-				"type": "logits" if hasattr(algo,"get_processor") else "semantic",
+				"description": algo_class.__doc__ or "No description available",
+				"type": "logits" if hasattr(algo_class,"get_processor") else "semantic",
 				"params": {
 					# 这里可以添加算法支持的参数说明
 					# 例如DIP的projection_dim, threshold等
+					"key": "秘钥"
 					#TODO: 每个水印的参数系统，和可能的自动调参功能
 				}
 			}
@@ -134,12 +134,9 @@ async def visualize_watermark(
 	try:
 		# 获取水印算法实例
 		watermark = get_watermark_algorithm(request.algorithm, **request.params)
-		
-		# 先执行检测
-		detection_result = watermark.detect(request.text, request.key)
-		
+
 		# 生成可视化数据
-		visualization_data = watermark.visualize(request.text, detection_result.get("details"))
+		visualization_data = watermark.visualize(request.text)
 		
 		return visualization_data
 	
