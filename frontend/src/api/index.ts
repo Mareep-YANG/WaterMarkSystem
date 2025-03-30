@@ -8,7 +8,7 @@ export const auth = {
 
   // 用户登录
   login: (data: { username: string; password: string }) =>
-    request.post('/auth/login', data),
+    request.login(data.username, data.password),
 
   // 创建API密钥
   createApiKey: (description: string) =>
@@ -22,7 +22,7 @@ export const auth = {
     request.delete(`/auth/api-keys/${id}`),
 
   // 获取用户信息
-  getProfile: () => request.get('/auth/me'),
+  getProfile: () => request.get('/auth/info'),
 };
 
 // 水印相关接口

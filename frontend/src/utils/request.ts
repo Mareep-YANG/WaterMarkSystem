@@ -76,6 +76,20 @@ class Request {
   public delete<T = any>(url: string): Promise<T> {
     return this.request({ method: 'DELETE', url });
   }
+  public login<T = any>(username: string, password: string): Promise<T> {
+    // 使用URLSearchParams创建application/x-www-form-urlencoded格式的数据
+    const formData = new URLSearchParams();
+    formData.append('username', username);
+    formData.append('password', password);
+    return this.request({
+      method: 'POST',
+      url: '/auth/login',
+      data: formData,
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded'
+      }
+    });
+  }
 }
 
 export default new Request();

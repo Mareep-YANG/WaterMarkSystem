@@ -1,5 +1,4 @@
 import { createRouter, createWebHistory, RouteRecordRaw } from 'vue-router'; // 引入Vue Router的相关函数和类型
-
 const routes: RouteRecordRaw[] = [
   {
     path: '/',
@@ -8,15 +7,15 @@ const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: true } // 需要认证的页面
   },
   {
-    path: '/login',
-    name: 'Login',
-    component: () => import('@/views/Login.vue'), // 懒加载Login组件
-    meta: { guest: true } // 游客页面
-  },
-  {
     path: '/register',
     name: 'Register',
     component: () => import('@/views/Register.vue'), // 懒加载Register组件
+    meta: { guest: true } // 游客页面
+  },
+  {
+    path: '/login',
+    name: 'Login',
+    component: () => import('@/views/Login.vue'), // 懒加载Login组件
     meta: { guest: true } // 游客页面
   },
   {

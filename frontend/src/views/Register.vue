@@ -143,7 +143,7 @@ const handleSubmit = async () => {
     await api.auth.register({ username, email, password }); // 调用注册API
     
     ElMessage.success('注册成功，请登录'); // 显示成功消息
-    router.push('/login'); // 跳转到登录页面
+    await router.push('/login'); // 跳转到登录页面
   } catch (error: any) {
     ElMessage.error(error.response?.data?.detail || '注册失败'); // 显示错误消息
   } finally {
@@ -152,7 +152,7 @@ const handleSubmit = async () => {
 };
 // 跳转到登录页面
 const goToRegister = () => {
-  router.push('/login');
+   router.push('/login');
 };
 </script>
 

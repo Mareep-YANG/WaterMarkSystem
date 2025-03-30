@@ -89,37 +89,11 @@ const handleSubmit = async () => {
     await formRef.value.validate();
     loading.value = true;
 
-    // 模拟网络延迟
-    await new Promise(resolve => setTimeout(resolve, 1000));
-
-    // 开发环境模拟登录
-    if (import.meta.env.DEV) {
-      // 预设测试账号
-      const testCredentials = [
-        { username: "admin", password: "admin123" },
-        { username: "user", password: "user123" }
-      ];
-
-      const found = testCredentials.some(cred =>
-          cred.username === formData.username &&
-          cred.password === formData.password
-      );
-
-      if (!found) {
-        throw new Error('用户名或密码错误');
-      }
-
-      // 设置模拟token
-      localStorage.setItem('token', 'mock-token');
-      userStore.setToken("testtoken");
-    } else {
-      // 生产环境的真实请求
-      await userStore.login(formData.username, formData.password);
-    }
+    await userStore.login(formData.username, formData.password);
 
     ElMessage.success('登录成功');
     const redirect = route.query.redirect as string;
-    router.push(redirect || '/');
+    await router.push(redirect || '/');
   } catch (error: any) {
     ElMessage.error(error.message || '登录失败');
   } finally {
