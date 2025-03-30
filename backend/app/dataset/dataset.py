@@ -2,7 +2,7 @@ import os
 import uuid
 from typing import Optional
 
-from app.models import Dataset
+from ..dbModels.dataset  import Dataset
 from datasets import Dataset as HFDataset, load_dataset
 
 async def process_uploaded_dataset(file_path: str, dataset_id: uuid.UUID, format_type: str):
