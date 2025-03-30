@@ -8,7 +8,7 @@ from transformers import (
 	LogitsProcessorList,
 )
 
-from .config import cfg
+from app.core.config import cfg
 
 
 class LLMService:
@@ -22,18 +22,42 @@ class LLMService:
 	
 	def __init__(self):
 		if not hasattr(self, 'initialized'):
-			self.device = "cuda" if torch.cuda.is_available() else "cpu"
 			self.model = None
 			self.tokenizer = None
 			self.processors = LogitsProcessorList()
 			self.initialized = True
-	
-	def load_model(self, model_name: Optional[str] = None):
+			# 获取可用设备
+			if torch.cuda.is_available():
+				self.device = "cuda"
+	#		elif hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
+	#			self.device = "mps" 某些算法的计算过程不允许使用MPS
+			else:
+				self.device = "cpu"
+
+	def get_model(self):
+		"""返回现在模型信息"""
+		if not self.model or not self.tokenizer:
+			return {
+				"status": "not_loaded",
+				"message": "模型尚未加载"
+			}
+
+		model_info = {
+			"status": "loaded",
+			"vocab_size": len(self.tokenizer),  # 获取词汇表大小
+			"model_type": self.model.config.model_type if hasattr(self.model.config, 'model_type') else "unknown",
+			"device": self.device,
+			"model_name": self.model.config.name_or_path if hasattr(self.model.config, 'name_or_path') else "unknown"
+		}
+
+		return model_info
+
+	async def load_model(self, model_name: Optional[str] = None):
 		"""加载模型"""
 		model_name = model_name or cfg.MODEL_PATH
 		self.model = AutoModelForCausalLM.from_pretrained(
 			model_name,
-			cache_dir=cfg.MODEL_CACHE_DIR
+			cache_dir=cfg.MODEL_CACHE_DIR,
 		).to(self.device)
 		self.tokenizer = AutoTokenizer.from_pretrained(
 			model_name,
@@ -60,34 +84,21 @@ class LLMService:
 		"""生成文本"""
 		if not self.model or not self.tokenizer:
 			raise RuntimeError("Model not loaded. Call load_model() first.")
-		
-		inputs = self.tokenizer(prompt, return_tensors="pt").to(self.device)
-		
+
+		inputs = self.tokenizer(prompt, return_tensors="pt", add_special_tokens=True).to(self.device)
+
 		generation_config = {
 			"max_length": max_length,
 			"temperature": temperature,
 			"top_p": top_p,
 			"do_sample": True,
-			"logits_processor": self.processors if self.processors else None,
 			**kwargs
 		}
-		
 		outputs = self.model.generate(**inputs, **generation_config)
 		return self.tokenizer.decode(
 			outputs[0],
 			skip_special_tokens=True
 		)
-	
-	async def get_logits(self, text: str) -> torch.Tensor:
-		"""获取文本的logits分布"""
-		if not self.model or not self.tokenizer:
-			raise RuntimeError("Model not loaded. Call load_model() first.")
-		
-		inputs = self.tokenizer(text, return_tensors="pt").to(self.device)
-		with torch.no_grad():
-			outputs = self.model(**inputs)
-		return outputs.logits
-
 
 # 全局LLM服务实例
 llm_service = LLMService()

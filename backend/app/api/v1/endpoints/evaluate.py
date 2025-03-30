@@ -7,7 +7,7 @@ from fastapi import (
 from pydantic import BaseModel
 
 from ..deps import get_auth_user
-from app.models import User
+from ....dbModels.user import User
 from ....watermarks import get_watermark_algorithm
 
 router = APIRouter()

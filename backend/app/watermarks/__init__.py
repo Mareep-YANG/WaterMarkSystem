@@ -5,7 +5,7 @@ from .semstamp import SemStampWatermark
 # 注册可用的水印算法
 WATERMARK_ALGORITHMS = {
 	"dip": DIPWatermark,
-	"semstamp": SemStampWatermark,
+	# "semstamp": SemStampWatermark,
 }
 
 
@@ -16,7 +16,7 @@ def get_watermark_algorithm(name: str, **kwargs) -> WatermarkBase:
 		name: 算法名称
 		**kwargs: 算法参数
 	Returns:
-		水印算法实例
+		水印算法实例œ
 	Raises:
 		ValueError: 如果算法不存在
 	"""

@@ -17,7 +17,7 @@ from ....core.security import (
 	get_password_hash,
 	verify_password,
 )
-from app.models import APIKey, User
+from ....dbModels.user import APIKey, User
 
 router = APIRouter()
 

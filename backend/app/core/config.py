@@ -14,9 +14,9 @@ class Settings(BaseSettings):
 	APP_NAME: str = "Watermark System"
 	VERSION: str = "1.0.0"
 	API_V1: str = "/api/v1"
-	
+	DEBUG: bool = False
 	# 安全设置
-	CORS_ORIGINS: List[AnyHttpUrl] = []
+	CORS_ORIGINS: List[AnyHttpUrl] = ["http://localhost:3000"]
 	JWT_SECRET_KEY: str
 	ALGORITHM: str = "HS256"
 	ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
@@ -29,7 +29,7 @@ class Settings(BaseSettings):
 	SQL_DBNAME: str
 	
 	# 模型配置
-	MODEL_PATH: str = "gpt2"
+	MODEL_PATH: str = "facebook/opt-1.3b"
 	MODEL_CACHE_DIR: str = ".cache/models"
 	
 	class Config:
@@ -58,7 +58,7 @@ class Settings(BaseSettings):
 		return {
 			"apps": {
 				"models": {
-					"models": ["app.models", "aerich.models"],
+					"models": ["app.dbModels", "aerich.models"],
 					"default_connection": "default"
 				}
 			},

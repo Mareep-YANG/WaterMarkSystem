@@ -1,12 +1,13 @@
+import logging
 from typing import Any, Dict, List
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 
 from ..deps import get_auth_user
-from ....core import llm_service
-from app.models import User
-from ....watermarks import get_watermark_algorithm, WATERMARK_ALGORITHMS
+from ....models.llm import llm_service
+from ....dbModels.user import User
+from ....watermarks import get_watermark_algorithm, WATERMARK_ALGORITHMS, LogitsWatermark
 
 router = APIRouter()
 
@@ -14,7 +15,6 @@ router = APIRouter()
 class WatermarkRequest(BaseModel):
 	text: str
 	algorithm: str
-	key: str
 	params: Dict[str, Any] = {}
 
 
@@ -26,14 +26,12 @@ class WatermarkResponse(BaseModel):
 class DetectionRequest(BaseModel):
 	text: str
 	algorithm: str
-	key: str
 	params: Dict[str, Any] = {}
 
 
 class DetectionResponse(BaseModel):
 	detected: bool
 	confidence: float
-	details: Dict[str, Any]
 
 
 class AlgorithmInfo(BaseModel):
@@ -48,17 +46,19 @@ async def list_algorithms() -> Any:
 	"""
 	获取所有支持的水印算法
 	"""
+	# 水印列表
 	algorithms = []
-	for name, algo_class in WATERMARK_ALGORITHMS.items():
+	for name, algo_class in WATERMARK_ALGORITHMS.items(): # 遍历水印包获取水印算法
 		algo = algo_class()
 		algorithms.append(
 			{
 				"name": name,
 				"description": algo.__doc__ or "No description available",
-				"type": "logits" if hasattr(algo, "process_logits") else "semantic",
+				"type": "logits" if hasattr(algo,"get_processor") else "semantic",
 				"params": {
 					# 这里可以添加算法支持的参数说明
 					# 例如DIP的projection_dim, threshold等
+					#TODO: 每个水印的参数系统，和可能的自动调参功能
 				}
 			}
 		)
@@ -68,25 +68,23 @@ async def list_algorithms() -> Any:
 @router.post("/embed", response_model=WatermarkResponse)
 async def embed_watermark(
 	request: WatermarkRequest,
-	current_user: User = Depends(get_auth_user),
 ) -> Any:
 	"""
 	嵌入水印
 	"""
 	try:
 		# 获取水印算法实例
-		watermark = get_watermark_algorithm(request.algorithm, **request.params)
+		watermark = get_watermark_algorithm(request.algorithm, **request.params) # 传入水印名和参数，获取水印算法实例
 		
-		if hasattr(watermark, "process_logits"):
+		if isinstance(watermark, LogitsWatermark):
 			# Logits级水印
 			# 添加处理器并生成文本
-			llm_service.clear_processors()
-			llm_service.add_processor(watermark.get_processor(request.key))
-			watermarked_text = await llm_service.generate(request.text)
+			logging.debug("LogitsWatermark embeding")
+			watermarked_text = watermark.embed(request.text)
 			metadata = {"type": "logits"}
 		else:
 			# 语义级水印
-			watermarked_text = watermark.embed(request.text, request.key)
+			watermarked_text = ""
 			metadata = {"type": "semantic"}
 		
 		return {
@@ -114,7 +112,7 @@ async def detect_watermark(
 		watermark = get_watermark_algorithm(request.algorithm, **request.params)
 		
 		# 执行检测
-		result = watermark.detect(request.text, request.key)
+		result = watermark.detect(request.text)
 		
 		return result
 	
@@ -141,7 +139,7 @@ async def visualize_watermark(
 		detection_result = watermark.detect(request.text, request.key)
 		
 		# 生成可视化数据
-		visualization_data = watermark.visualize(request.text, detection_result)
+		visualization_data = watermark.visualize(request.text, detection_result.get("details"))
 		
 		return visualization_data
 	
