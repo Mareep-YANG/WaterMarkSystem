@@ -35,7 +35,7 @@ class WatermarkBase(ABC):
 		pass
 	
 	@abstractmethod
-	def visualize(self, text: str, detection_result: Dict[str, Any]) -> Dict[str, Any]:
+	def visualize(self, text: str) -> Dict[str, Any]:
 		"""
 		可视化检测结果
 		Args:

@@ -3,7 +3,7 @@ import hashlib
 import torch.nn.functional as F
 from math import sqrt
 from typing import Any, Dict, Union, Tuple
-
+from pydantic import BaseModel, Field
 from transformers import LogitsProcessor
 
 from app.models.llm import llm_service
@@ -102,27 +102,29 @@ class DIPWatermark(LogitsWatermark):
             "confidence": z_score,
         }
 
-    def visualize(self, text: str, detection_result: Dict[str, Any]) -> Dict[str, Any]:
+    def visualize(self, text: str) -> Dict[str, Any]:
         """Visualize watermark detection results"""
-        tokenizer = llm_service.tokenizer
+        # Set the state indicator to 1 for visualization
+        self.state_indicator = 1
 
-        # Tokenize text
-        encoded_text = tokenizer(text, return_tensors="pt", add_special_tokens=False)["input_ids"][0].to(
+        # Encode text
+        encoded_text = \
+        llm_service.tokenizer(text, return_tensors="pt", add_special_tokens=False)["input_ids"][0].to(
             llm_service.device)
 
-        # Get tokens
+        # Compute the highlight values
+        _, highlight_values = self.score_sequence(encoded_text)
+
+        # decode single tokens
         decoded_tokens = []
         for token_id in encoded_text:
-            token = tokenizer.decode(token_id.item())
+            token = llm_service.tokenizer.decode(token_id.item())
             decoded_tokens.append(token)
 
-        # Use the green_token_flags from detection result
-        highlight_values = detection_result.get("green_token_flags", [])
+        # Clear the history
+        self.cc_history.clear()
 
-        return {
-            "tokens": decoded_tokens,
-            "highlight_values": highlight_values
-        } #TODO 重构
+        return {"decoded_tokens":decoded_tokens, "highlight_values":highlight_values}
 
     def get_processor(self, key: str) -> LogitsProcessor:
         """Return a logits processor for this watermark"""
@@ -271,3 +273,4 @@ class DIPWatermark(LogitsWatermark):
             z_score = (green_tokens - (1 - self.gamma) * input_ids.size(-1)) / sqrt(input_ids.size(-1))
 
         return z_score.item(), green_token_flags.tolist()
+
