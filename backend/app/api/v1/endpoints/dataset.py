@@ -3,9 +3,9 @@ import uuid
 from typing import Optional
 
 from fastapi import APIRouter, UploadFile, File, Form, BackgroundTasks, HTTPException
-from datasets import Dataset as HFDataset, load_dataset
+from datasets import Dataset as HFDataset
 from app.models import Dataset
-from app.models.dataset import DatasetPydantic
+from app.models import DatasetPydantic
 from app.dataset.dataset import process_uploaded_dataset,import_hf_dataset
 router = APIRouter()
 

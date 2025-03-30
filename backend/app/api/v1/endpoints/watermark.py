@@ -5,7 +5,7 @@ from pydantic import BaseModel
 
 from ..deps import get_auth_user
 from ....core import llm_service
-from ....models.user import User
+from app.models import User
 from ....watermarks import get_watermark_algorithm, WATERMARK_ALGORITHMS
 
 router = APIRouter()
