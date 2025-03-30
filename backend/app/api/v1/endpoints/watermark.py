@@ -5,8 +5,8 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 
 from ..deps import get_auth_user
-from ....core import llm_service
-from ....models.user import User
+from ....models.llm import llm_service
+from ....dbModels.user import User
 from ....watermarks import get_watermark_algorithm, WATERMARK_ALGORITHMS, LogitsWatermark
 
 router = APIRouter()
@@ -15,7 +15,6 @@ router = APIRouter()
 class WatermarkRequest(BaseModel):
 	text: str
 	algorithm: str
-	key: str
 	params: Dict[str, Any] = {}
 
 
@@ -27,14 +26,12 @@ class WatermarkResponse(BaseModel):
 class DetectionRequest(BaseModel):
 	text: str
 	algorithm: str
-	key: str
 	params: Dict[str, Any] = {}
 
 
 class DetectionResponse(BaseModel):
 	detected: bool
 	confidence: float
-	details: Dict[str, Any]
 
 
 class AlgorithmInfo(BaseModel):
@@ -83,9 +80,7 @@ async def embed_watermark(
 			# Logits级水印
 			# 添加处理器并生成文本
 			logging.debug("LogitsWatermark embeding")
-			llm_service.clear_processors()
-			llm_service.add_processor(watermark.get_processor(request.key))
-			watermarked_text = await llm_service.generate(request.text)
+			watermarked_text = watermark.embed(request.text)
 			metadata = {"type": "logits"}
 		else:
 			# 语义级水印
@@ -117,7 +112,7 @@ async def detect_watermark(
 		watermark = get_watermark_algorithm(request.algorithm, **request.params)
 		
 		# 执行检测
-		result = watermark.detect(request.text, request.key)
+		result = watermark.detect(request.text)
 		
 		return result
 	

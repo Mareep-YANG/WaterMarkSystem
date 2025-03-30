@@ -1,10 +1,10 @@
-from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks
+from fastapi import APIRouter, HTTPException, BackgroundTasks
 from pydantic import BaseModel, Field, ConfigDict
 from typing import Optional, List
 from datetime import datetime
 
-from app.core.llm import LLMService, llm_service
-from app.models import HuggingfaceModel
+from app.models.llm import llm_service
+from app.dbModels import HuggingfaceModel
 
 router = APIRouter()
 
@@ -91,7 +91,6 @@ async def load_model(model_id: int, background_tasks: BackgroundTasks):
     if not model:
         raise HTTPException(status_code=404, detail="模型不存在")
 
-    # 如果是大模型，可以放到后台任务中加载
     async def _load_model():
         await llm_service.load_model(model.model_name)
         model.is_loaded = True

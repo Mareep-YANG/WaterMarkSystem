@@ -10,20 +10,19 @@ class WatermarkBase(ABC):
 	"""水印算法基类"""
 	
 	@abstractmethod
-	def embed(self, logits: Any, key: str,input_ids: Any) -> Any:
+	def embed(self, prompt: Any) -> str:
 		"""
 		嵌入水印
 		Args:
-			logits: 文本或logits
+			prompt: 输入文本提示
 			key: 水印密钥
-			input_ids: token
 		Returns:
-			包含处理后的logits
+			包含处理后的文本
 		"""
 		pass
 	
 	@abstractmethod
-	def detect(self, text: str, key: str, **kwargs) -> Dict[str, Any]:
+	def detect(self, text: str,  **kwargs) -> Dict[str, Any]:
 		"""
 		检测水印,模型和分词器从从llmservice
 		Args:
@@ -48,38 +47,13 @@ class WatermarkBase(ABC):
 		pass
 
 
-class WatermarkLogitsProcessor(LogitsProcessor):
-	"""水印处理器基类"""
-	
-	def __init__(self, watermark: WatermarkBase, key: str):
-		self.watermark = watermark
-		self.key = key
-	
-	def __call__(
-		self,
-		input_ids: torch.LongTensor,
-		scores: torch.FloatTensor
-	) -> torch.FloatTensor:
-		"""
-		处理token logits
-		Args:
-			input_ids: 输入token IDs
-			scores: token的logits分数
-			**kwargs: 其他参数
-		Returns:
-			处理后的logits分数
-		"""
-		return self.watermark.embed(
-			scores, self.key,
-			input_ids=input_ids,
-		)
 
 
 class LogitsWatermark(WatermarkBase):
 	"""Logits级水印基类"""
 
 	@abstractmethod
-	def get_processor(self, key: str) -> 'WatermarkLogitsProcessor':
+	def get_processor(self, key: str) -> LogitsProcessor:
 		"""
 		获取对应的LogitsProcessor实现
 		Args:
@@ -87,7 +61,6 @@ class LogitsWatermark(WatermarkBase):
 		Returns:
 			LogitsProcessor实例
 		"""
-		return WatermarkLogitsProcessor(self, key)
 
 
 class SemanticWatermark(WatermarkBase):

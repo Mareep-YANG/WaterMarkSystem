@@ -16,7 +16,7 @@ from tortoise.contrib.fastapi import register_tortoise
 from tortoise.exceptions import DoesNotExist
 
 from ...core import cfg, TORTOISE_ORM
-from ...models.user import APIKey, User
+from ...dbModels.user import APIKey, User
 
 oauth2_scheme = OAuth2PasswordBearer(
 	tokenUrl=f"{cfg.API_V1}/auth/login"

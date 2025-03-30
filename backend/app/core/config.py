@@ -58,7 +58,7 @@ class Settings(BaseSettings):
 		return {
 			"apps": {
 				"models": {
-					"models": ["app.models", "aerich.models"],
+					"models": ["app.dbModels", "aerich.models"],
 					"default_connection": "default"
 				}
 			},
