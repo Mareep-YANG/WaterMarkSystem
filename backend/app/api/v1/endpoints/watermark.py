@@ -111,18 +111,13 @@ async def process_detect_task(task_id: str):
 			watermark.detect,
 			detection_request.text
 		)
-		
-		# 转换结果格式
-		formatted_result = {
-			"detected": detection_result.detected,
-			"confidence": detection_result.confidence
-		}
+
 		
 		with tasks.task_lock:
 			tasks.tasks[task_id].update(
 				{
 					"status": tasks.TaskStatus.COMPLETED,
-					"result": formatted_result,
+					"result": detection_result,
 					"completed_at": datetime.now()
 				}
 			)
