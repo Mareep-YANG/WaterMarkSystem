@@ -1,9 +1,4 @@
 import { createRouter, createWebHistory, RouteRecordRaw } from 'vue-router'; // 引入Vue Router的相关函数和类型
-<<<<<<< HEAD
-
-
-=======
->>>>>>> 965f4a9f758b3492129fab782a4e715b50ddeabd
 const routes: RouteRecordRaw[] = [
   {
     path: '/',

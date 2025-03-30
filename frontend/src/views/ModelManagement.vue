@@ -1,326 +1,460 @@
 <template>
   <div class="model-management">
-    <!-- 模型管理页面的主要卡片 -->
-    <el-card class="model-section">
-      <template #header>
-        <div class="card-header">
-          <span>Available Models</span>
-          <!-- 打开导入模型对话框的按钮 -->
-          <el-button type="primary" @click="openImportDialog">Import Model</el-button>
-        </div>
-      </template>
+    <el-card class="model-header">
+      <div class="header-content">
+        <h1>大模型管理系统</h1>
+        <el-button type="primary" @click="openAddModelDialog">添加模型</el-button>
+      </div>
+    </el-card>
 
-      <!-- 模型列表表格 -->
-      <el-table v-loading="loading" :data="models" style="width: 100%">
-        <!-- 模型名称列 -->
-        <el-table-column prop="name" label="Name" />
-        <!-- 模型描述列 -->
-        <el-table-column prop="description" label="Description" />
-        <!-- 模型大小列 -->
-        <el-table-column prop="size" label="Size" width="120" />
-        <!-- 模型状态列 -->
-        <el-table-column prop="status" label="Status" width="120">
+    <!-- 模型列表 -->
+    <el-card class="model-list">
+      <el-table :data="modelsList" v-loading="loading" border style="width: 100%">
+        <el-table-column prop="id" label="ID" width="180" show-overflow-tooltip />
+        <el-table-column prop="model_name" label="模型名称" width="180" />
+        <el-table-column prop="description" label="描述" show-overflow-tooltip />
+        <el-table-column prop="is_loaded" label="状态" width="100">
           <template #default="scope">
-            <!-- 根据状态动态显示标签 -->
-            <el-tag :type="getStatusType(scope.row.status)">{{ scope.row.status }}</el-tag>
+            <el-tag :type="scope.row.is_loaded ? 'success' : 'warning'">
+              {{ scope.row.is_loaded ? '已加载' : '未加载' }}
+            </el-tag>
           </template>
         </el-table-column>
-        <!-- 操作列 -->
-        <el-table-column label="Actions" width="250">
+        <el-table-column prop="created_at" label="创建时间" width="180" show-overflow-tooltip>
           <template #default="scope">
-            <!-- 下载按钮 -->
-            <el-button type="primary" size="small" @click="handleDownload(scope.row)">
-              Download
+            {{ formatDate(scope.row.created_at) }}
+          </template>
+        </el-table-column>
+        <el-table-column label="操作" width="280">
+          <template #default="scope">
+            <el-button 
+              type="primary" 
+              size="small" 
+              :disabled="scope.row.is_loaded" 
+              @click="handleLoadModel(scope.row.id)"
+            >
+              加载
             </el-button>
-            <!-- 查看详情按钮 -->
-            <el-button type="info" size="small" @click="handleViewDetails(scope.row)">
-              Details
+            <el-button 
+              type="success" 
+              size="small" 
+              :disabled="!scope.row.is_loaded" 
+              @click="openGenerateDialog(scope.row)"
+            >
+              文本生成
             </el-button>
-            <!-- 删除按钮 -->
-            <el-button type="danger" size="small" @click="handleDelete(scope.row)">
-              Delete
+            <el-button 
+              type="danger" 
+              size="small" 
+              @click="handleDeleteModel(scope.row.id)"
+            >
+              删除
             </el-button>
           </template>
         </el-table-column>
       </el-table>
     </el-card>
 
-    <!-- 导入模型对话框 -->
-    <el-dialog v-model="importDialogVisible" title="Import Model" width="500px">
-      <!-- 导入方式选项卡 -->
-      <el-tabs v-model="importType">
-        <!-- 从 URL 导入 -->
-        <el-tab-pane label="From URL" name="url">
-          <el-form :model="importForm" label-width="120px">
-            <!-- 模型名称输入框 -->
-            <el-form-item label="Model Name" required>
-              <el-input v-model="importForm.name" placeholder="Enter model name" />
-            </el-form-item>
-            <!-- 模型描述输入框 -->
-            <el-form-item label="Description">
-              <el-input 
-                v-model="importForm.description" 
-                type="textarea" 
-                placeholder="Enter model description"
-              />
-            </el-form-item>
-            <!-- 模型 URL 输入框 -->
-            <el-form-item label="URL" required>
-              <el-input v-model="importForm.url" placeholder="https://example.com/model.bin" />
-            </el-form-item>
-          </el-form>
-        </el-tab-pane>
-
-        <!-- 从本地文件导入 -->
-        <el-tab-pane label="From Local File" name="file">
-          <el-form :model="importForm" label-width="120px">
-            <!-- 模型名称输入框 -->
-            <el-form-item label="Model Name" required>
-              <el-input v-model="importForm.name" placeholder="Enter model name" />
-            </el-form-item>
-            <!-- 模型描述输入框 -->
-            <el-form-item label="Description">
-              <el-input 
-                v-model="importForm.description" 
-                type="textarea" 
-                placeholder="Enter model description"
-              />
-            </el-form-item>
-            <!-- 文件路径输入框 -->
-            <el-form-item label="File Path" required>
-              <el-input v-model="importForm.file_path" placeholder="/path/to/model.bin" />
-              <!-- 浏览文件路径按钮 -->
-              <el-button style="margin-top: 8px" @click="selectFilePath">
-                Browse File Path
-              </el-button>
-            </el-form-item>
-          </el-form>
-        </el-tab-pane>
-      </el-tabs>
-
-      <!-- 对话框底部按钮 -->
+    <!-- 添加模型对话框 -->
+    <el-dialog
+      v-model="addModelDialogVisible"
+      title="添加新模型"
+      width="500px"
+    >
+      <el-form :model="modelForm" :rules="modelRules" ref="modelFormRef" label-width="100px">
+        <el-form-item label="模型名称" prop="model_name">
+          <el-input v-model="modelForm.model_name" placeholder="输入Huggingface模型名称" />
+        </el-form-item>
+        <el-form-item label="描述" prop="description">
+          <el-input 
+            type="textarea" 
+            v-model="modelForm.description" 
+            placeholder="请输入模型描述" 
+            :rows="3"
+          />
+        </el-form-item>
+      </el-form>
       <template #footer>
-        <span class="dialog-footer">
-          <!-- 取消按钮 -->
-          <el-button @click="importDialogVisible = false">Cancel</el-button>
-          <!-- 导入按钮 -->
-          <el-button type="primary" @click="handleImport" :loading="importing">
-            Import
+        <span>
+          <el-button @click="addModelDialogVisible = false">取消</el-button>
+          <el-button type="primary" @click="handleAddModel" :loading="submitting">
+            确认添加
           </el-button>
         </span>
       </template>
     </el-dialog>
 
-    <!-- 模型详情对话框 -->
-    <el-dialog v-model="detailsDialogVisible" title="Model Details" width="600px">
-      <div v-if="selectedModel">
-        <!-- 模型详情描述 -->
-        <el-descriptions :column="1" border>
-          <el-descriptions-item label="ID">{{ selectedModel.id }}</el-descriptions-item>
-          <el-descriptions-item label="Name">{{ selectedModel.name }}</el-descriptions-item>
-          <el-descriptions-item label="Description">{{ selectedModel.description }}</el-descriptions-item>
-          <el-descriptions-item label="Size">{{ selectedModel.size }}</el-descriptions-item>
-          <el-descriptions-item label="Status">
-            <el-tag :type="getStatusType(selectedModel.status)">{{ selectedModel.status }}</el-tag>
-          </el-descriptions-item>
-          <el-descriptions-item label="Created At">{{ formatDate(selectedModel.created_at) }}</el-descriptions-item>
-          <el-descriptions-item label="Updated At">{{ formatDate(selectedModel.updated_at) }}</el-descriptions-item>
-        </el-descriptions>
+    <!-- 生成文本对话框 -->
+    <el-dialog
+      v-model="generateDialogVisible"
+      title="生成文本"
+      width="650px"
+    >
+      <div v-if="currentModel">
+        <h3>选中模型: {{ currentModel.model_name }}</h3>
+        
+        <el-form :model="generateForm" ref="generateFormRef" label-width="120px">
+          <el-form-item label="输入文本" prop="text">
+            <el-input 
+              type="textarea" 
+              v-model="generateForm.text" 
+              placeholder="请输入提示文本"
+              :rows="4"
+            />
+          </el-form-item>
+          
+          <el-form-item label="算法" prop="algorithm">
+            <el-select v-model="generateForm.algorithm" style="width: 100%">
+              <el-option label="贪婪搜索" value="greedy" />
+              <el-option label="束搜索" value="beam" />
+              <el-option label="随机采样" value="sampling" />
+            </el-select>
+          </el-form-item>
+          
+          <el-form-item label="密钥" prop="key">
+            <el-input v-model="generateForm.key" placeholder="请输入密钥(可选)" />
+          </el-form-item>
+          
+          <el-form-item label="攻击类型" prop="attacktype">
+            <el-select v-model="generateForm.attacktype" style="width: 100%">
+              <el-option label="无" value="none" />
+              <el-option label="提示注入" value="prompt_injection" />
+              <el-option label="越狱" value="jailbreak" />
+              <el-option label="目标攻击" value="targeted" />
+            </el-select>
+          </el-form-item>
+          
+          <el-form-item 
+            label="攻击参数" 
+            prop="attackparams" 
+            v-if="generateForm.attacktype !== 'none'"
+          >
+            <el-input 
+              type="textarea" 
+              v-model="attackParamsJson" 
+              placeholder="请以JSON格式输入攻击参数"
+              :rows="3"
+            />
+            <div class="params-tip" v-if="paramsError">
+              <el-alert
+                :title="paramsError"
+                type="error"
+                :closable="false"
+                show-icon
+              />
+            </div>
+          </el-form-item>
+        </el-form>
+        
+        <div v-if="generating" class="generating-indicator">
+          <el-progress type="circle" :percentage="generatingProgress" />
+          <p>正在生成文本...</p>
+        </div>
+        
+        <div v-if="generatedText" class="generated-result">
+          <h4>生成结果:</h4>
+          <el-card shadow="never">
+            <div class="text-content">{{ generatedText }}</div>
+          </el-card>
+        </div>
       </div>
+      
+      <template #footer>
+        <span>
+          <el-button @click="generateDialogVisible = false">关闭</el-button>
+          <el-button 
+            type="primary" 
+            @click="handleGenerateText" 
+            :loading="generating"
+            :disabled="!isGenerateFormValid"
+          >
+            生成文本
+          </el-button>
+        </span>
+      </template>
     </el-dialog>
   </div>
 </template>
 
-<script lang="ts" setup>
-// 引入 Vue 的 ref 和生命周期钩子
-import { ref, onMounted } from 'vue';
-// 引入 Element Plus 的消息提示和消息框组件
+<script setup lang="ts">
+import { ref, reactive, computed, onMounted, watch } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
-// 引入 API 模块和类型定义
-import api, { Model, ModelImportParams } from '@/api';
+import type { FormInstance, FormRules } from 'element-plus';
+import { models, Model } from '@/api/index';
 
-// 定义响应式变量
-const models = ref<Model[]>([]); // 模型列表
-const loading = ref(false); // 加载状态
-const importing = ref(false); // 导入状态
-const importDialogVisible = ref(false); // 导入对话框可见性
-const detailsDialogVisible = ref(false); // 详情对话框可见性
-const selectedModel = ref<Model | null>(null); // 当前选中的模型
-const importType = ref('url'); // 导入类型（URL 或文件）
-const importForm = ref<ModelImportParams>({
-  name: '',
-  description: '',
-  url: '',
-  file_path: ''
+// 数据和状态
+const loading = ref(false);
+const submitting = ref(false);
+const generating = ref(false);
+const generatingProgress = ref(0);
+const modelsList = ref<Model[]>([]);
+const currentModel = ref<Model | null>(null);
+const generatedText = ref('');
+const paramsError = ref('');
+
+// 对话框控制
+const addModelDialogVisible = ref(false);
+const generateDialogVisible = ref(false);
+
+// 表单引用
+const modelFormRef = ref<FormInstance>();
+const generateFormRef = ref<FormInstance>();
+
+// 添加模型表单
+const modelForm = reactive({
+  model_name: '',
+  description: ''
 });
 
-// 页面加载时获取模型列表
-onMounted(() => {
-  fetchModels();
+// 表单验证规则
+const modelRules = reactive<FormRules>({
+  model_name: [
+    { required: true, message: '请输入模型名称', trigger: 'blur' },
+    { min: 2, message: '模型名称长度至少2个字符', trigger: 'blur' }
+  ],
+  description: [
+    { max: 500, message: '描述不能超过500个字符', trigger: 'blur' }
+  ]
 });
 
-// 获取模型列表的函数
-const fetchModels = async () => {
+// 生成文本表单
+const generateForm = reactive({
+  text: '',
+  algorithm: 'greedy',
+  key: '',
+  attacktype: 'none',
+  attackparams: {} as Record<string, any>
+});
+
+// 攻击参数JSON字符串
+const attackParamsJson = ref('{}');
+
+// 计算属性：验证JSON格式并转换为对象
+watch(attackParamsJson, (newValue) => {
+  try {
+    generateForm.attackparams = JSON.parse(newValue);
+    paramsError.value = '';
+  } catch (e) {
+    paramsError.value = '无效的JSON格式';
+  }
+});
+
+// 计算属性：表单是否有效
+const isGenerateFormValid = computed(() => {
+  if (!generateForm.text) return false;
+  if (generateForm.attacktype !== 'none' && paramsError.value) return false;
+  return true;
+});
+
+// 加载模型列表
+const loadModelsList = async () => {
   loading.value = true;
   try {
-    const response = await api.models.getModels();
-    models.value = response.models;
+    const response = await models.getModels();
+    modelsList.value = response.models;
   } catch (error) {
-    ElMessage.error('获取模型列表失败');
-    console.error(error);
+    ElMessage.error('加载模型列表失败');
+    console.error('Error loading models:', error);
   } finally {
     loading.value = false;
   }
 };
 
-// 打开导入对话框
-const openImportDialog = () => {
-  importForm.value = {
-    name: '',
-    description: '',
-    url: '',
-    file_path: ''
-  };
-  importDialogVisible.value = true;
+// 格式化日期
+const formatDate = (dateStr?: string) => {
+  if (!dateStr) return '';
+  const date = new Date(dateStr);
+  return date.toLocaleString();
 };
 
-// 处理模型导入
-const handleImport = async () => {
-  if (!importForm.value.name) {
-    return ElMessage.warning('Model name is required');
-  }
-
-  importing.value = true;
-
-  try {
-    if (importType.value === 'url') {
-      if (!importForm.value.url) {
-        return ElMessage.warning('URL is required');
+// 添加模型
+const handleAddModel = async () => {
+  if (!modelFormRef.value) return;
+  
+  await modelFormRef.value.validate(async (valid) => {
+    if (valid) {
+      submitting.value = true;
+      try {
+        await models.addModel({
+          model_name: modelForm.model_name,
+          description: modelForm.description
+        });
+        ElMessage.success('模型添加成功');
+        addModelDialogVisible.value = false;
+        loadModelsList();
+      } catch (error) {
+        ElMessage.error('添加模型失败');
+        console.error('Error adding model:', error);
+      } finally {
+        submitting.value = false;
       }
-      await api.models.importModelFromUrl(importForm.value);
-      ElMessage.success('Model import from URL initiated successfully');
-    } else {
-      if (!importForm.value.file_path) {
-        return ElMessage.warning('File path is required');
-      }
-      await api.models.importModelFromFile(importForm.value);
-      ElMessage.success('Model import from file initiated successfully');
     }
-
-    importDialogVisible.value = false;
-    fetchModels(); 
-  } catch (error) {
-    ElMessage.error('Failed to import model');
-    console.error(error);
-  } finally {
-    importing.value = false;
-  }
+  });
 };
 
-// 处理模型下载
-const handleDownload = async (model: Model) => {
+// 打开添加模型对话框
+const openAddModelDialog = () => {
+  modelForm.model_name = '';
+  modelForm.description = '';
+  addModelDialogVisible.value = true;
+};
+
+// 加载模型
+const handleLoadModel = async (id: string) => {
   try {
-    const response = await api.models.downloadModel(model.id);
-    const link = document.createElement('a');
-    link.href = response.download_url;
-    link.download = model.name;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-
-    ElMessage.success('Download started');
+    loading.value = true;
+    await models.loadModel(id);
+    ElMessage.success('模型加载成功');
+    loadModelsList(); // 刷新列表
   } catch (error) {
-    ElMessage.error('Failed to download model');
-    console.error(error);
+    ElMessage.error('模型加载失败');
+    console.error('Error loading model:', error);
+  } finally {
+    loading.value = false;
   }
 };
 
-// 处理模型删除
-const handleDelete = (model: Model) => {
+// 删除模型
+const handleDeleteModel = (id: string) => {
   ElMessageBox.confirm(
-    `Are you sure you want to delete model "${model.name}"?`,
-    'Warning',
+    '确定要删除该模型吗？此操作不可恢复。',
+    '警告',
     {
-      confirmButtonText: 'Delete',
-      cancelButtonText: 'Cancel',
-      type: 'warning',
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning'
     }
   )
-    .then(async () => {
-      try {
-        await api.models.deleteModel(model.id);
-        ElMessage.success('Model deleted successfully');
-        fetchModels(); 
-      } catch (error) {
-        ElMessage.error('Failed to delete model');
-        console.error(error);
-      }
-    })
-    .catch(() => {
-    });
+  .then(async () => {
+    try {
+      loading.value = true;
+      await models.deleteModel(id);
+      ElMessage.success('模型删除成功');
+      loadModelsList(); // 刷新列表
+    } catch (error) {
+      ElMessage.error('删除模型失败');
+      console.error('Error deleting model:', error);
+    } finally {
+      loading.value = false;
+    }
+  })
+  .catch(() => {
+    // 用户取消删除操作
+  });
 };
 
-// 查看模型详情
-const handleViewDetails = async (model: Model) => {
+// 打开文本生成对话框
+const openGenerateDialog = (model: Model) => {
+  currentModel.value = model;
+  generateForm.text = '';
+  generateForm.algorithm = 'greedy';
+  generateForm.key = '';
+  generateForm.attacktype = 'none';
+  generateForm.attackparams = {};
+  attackParamsJson.value = '{}';
+  generatedText.value = '';
+  generateDialogVisible.value = true;
+};
+
+// 模拟生成进度
+const simulateProgress = () => {
+  generatingProgress.value = 0;
+  const interval = setInterval(() => {
+    generatingProgress.value += 10;
+    if (generatingProgress.value >= 100) {
+      clearInterval(interval);
+    }
+  }, 300);
+  return interval;
+};
+
+// 生成文本
+const handleGenerateText = async () => {
+  if (!currentModel.value || !isGenerateFormValid.value) return;
+  
+  generating.value = true;
+  generatedText.value = '';
+  
+  // 模拟进度条
+  const progressInterval = simulateProgress();
+  
   try {
-    const detailedModel = await api.models.getModelById(model.id);
-    selectedModel.value = detailedModel;
-    detailsDialogVisible.value = true;
+    const data = {
+      text: generateForm.text,
+      algorithm: generateForm.algorithm,
+      key: generateForm.key,
+      attacktype: generateForm.attacktype
+    };
+    
+    // 只有当选择了攻击类型时才添加攻击参数
+    if (generateForm.attacktype !== 'none') {
+      Object.assign(data, { attackparams: generateForm.attackparams });
+    }
+    
+    const response = await models.generateText(currentModel.value.id, data);
+    generatedText.value = response.generated_text || JSON.stringify(response);
+    ElMessage.success('文本生成成功');
   } catch (error) {
-    ElMessage.error('Failed to fetch model details');
-    console.error(error);
+    ElMessage.error('文本生成失败');
+    console.error('Error generating text:', error);
+  } finally {
+    clearInterval(progressInterval);
+    generatingProgress.value = 100;
+    generating.value = false;
   }
 };
 
-// 模拟选择文件路径
-const selectFilePath = () => {
-  ElMessage.info('In a production environment, this would open a file browser');
-  importForm.value.file_path = '/models/custom_model.bin';
-};
-
-// 根据状态返回标签类型
-const getStatusType = (status?: string) => {
-  if (!status) return '';
-
-  switch (status.toLowerCase()) {
-    case 'available':
-      return 'success';
-    case 'downloading':
-    case 'importing':
-      return 'warning';
-    case 'error':
-      return 'danger';
-    default:
-      return 'info';
-  }
-};
-
-// 格式化日期
-const formatDate = (dateString?: string) => {
-  if (!dateString) return '';
-  return new Date(dateString).toLocaleString();
-};
+// 组件挂载时加载模型列表
+onMounted(() => {
+  loadModelsList();
+});
 </script>
 
 <style scoped>
-/* 页面样式 */
 .model-management {
+  max-width: 1200px;
+  margin: 0 auto;
   padding: 20px;
 }
 
-.model-section {
+.model-header {
   margin-bottom: 20px;
 }
 
-.card-header {
+.header-content {
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
 
-.dialog-footer {
+.model-list {
+  margin-bottom: 20px;
+}
+
+.generating-indicator {
   display: flex;
-  justify-content: flex-end;
-  gap: 10px;
+  flex-direction: column;
+  align-items: center;
+  margin: 20px 0;
+}
+
+.generated-result {
+  margin-top: 20px;
+  border-top: 1px solid #eee;
+  padding-top: 20px;
+}
+
+.text-content {
+  white-space: pre-wrap;
+  font-family: 'Courier New', monospace;
+  background-color: #f9f9f9;
+  padding: 10px;
+  border-radius: 4px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.params-tip {
+  margin-top: 8px;
 }
 </style>
