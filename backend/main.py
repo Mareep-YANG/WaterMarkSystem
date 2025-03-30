@@ -1,12 +1,10 @@
-import logging
-import traceback
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.v1 import api_router, init_db
-from app.core import cfg
+from app.core import cfg, tasks
 
 
 @asynccontextmanager
@@ -38,6 +36,11 @@ if cfg.CORS_ORIGINS:
 
 app.include_router(
 	api_router,
+	prefix=cfg.API_V1
+)
+
+app.include_router(
+	tasks.router,
 	prefix=cfg.API_V1
 )
 
