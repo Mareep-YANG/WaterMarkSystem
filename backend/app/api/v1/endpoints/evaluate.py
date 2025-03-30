@@ -11,6 +11,8 @@ from ..deps import get_auth_user
 from ....dbModels import Dataset
 from ....dbModels.user import User
 from ....evaluation.attacker import ATTACKERS, get_attacker
+from ....evaluation.detectability import evaluation_detectability
+from ....evaluation.quality import evaluation_quality
 from ....evaluation.robustness import evaluation_robustness
 from ....watermarks import get_watermark_algorithm
 
@@ -22,7 +24,7 @@ class EvaluationRequest(BaseModel):
     metrics: List[str]
     watermark_params: Dict[str, Any] = {}
     params: Dict[str, Any] = {}
-    attack_params : Dict[str, Any] = {}
+    attack_params: Dict[str, Any] = {}
     dataset_id: str
 
 
@@ -60,16 +62,36 @@ async def evaluate_watermark(
             if metric_name == "robustness":
                 # 鲁棒性评估
                 metrics_results.append(
-                    evaluation_robustness(
-                        watermark=watermark,
-                        dataset=dataset,
-                        attacker=get_attacker(request.params["attack_name"], **request.attack_params),
-                    ))
-        # elif metric_name == "quality":
-        # 	# 文本质量评估
-        #
-        # elif metric_name == "detectability":
-        # 	# 可检测性评估
+                    {"type": "robustness",
+                     "content": evaluation_robustness(
+                         watermark=watermark,
+                         dataset=dataset,
+                         attacker=get_attacker(request.params["attack_name"], **request.attack_params),
+                     )
+                     }
+                )
+            elif metric_name == "quality":
+                # 文本质量评估
+                metrics_results.append(
+                    {"type": "quality",
+                     "content": evaluation_quality(
+                         watermark=watermark,
+                         dataset=dataset,
+                         metrics=request.params["quality_metrics"]
+                     )
+                     }
+                )
+
+            elif metric_name == "detectability":
+                # 可检测性评估
+                metrics_results.append(
+                    {"type": "detectability",
+                     "content": evaluation_detectability(
+                         watermark=watermark,
+                         dataset=dataset,
+                     )
+                     }
+                )
 
         return {"metrics": metrics_results}
 
