@@ -1,13 +1,17 @@
 import logging
-from typing import Any, Dict, List
+from datetime import datetime
+from enum import Enum
+from threading import Lock
+from typing import Any, Dict, List, Optional
+from uuid import uuid4
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
+from fastapi.concurrency import run_in_threadpool
 from pydantic import BaseModel
 
 from ..deps import get_auth_user
-from ....models.llm import llm_service
 from ....dbModels.user import User
-from ....watermarks import get_watermark_algorithm, WATERMARK_ALGORITHMS, LogitsWatermark
+from ....watermarks import get_watermark_algorithm, LogitsWatermark, WATERMARK_ALGORITHMS
 
 router = APIRouter()
 
@@ -41,6 +45,139 @@ class AlgorithmInfo(BaseModel):
 	params: Dict[str, Any]
 
 
+class TaskStatus(str, Enum):
+	PENDING = "pending"
+	PROCESSING = "processing"
+	COMPLETED = "completed"
+	FAILED = "failed"
+
+
+class TaskResponse(BaseModel):
+	task_id: str
+	status: TaskStatus
+	result: Optional[Dict] = None
+	error: Optional[str] = None
+	created_at: datetime
+	completed_at: Optional[datetime] = None
+
+
+# 内存任务存储结构
+tasks: Dict[str, Dict] = {}
+task_lock = Lock()
+
+
+async def process_embed_task(task_id: str):
+	with task_lock:
+		task = tasks.get(task_id)
+		if not task:
+			return
+		task["status"] = TaskStatus.PROCESSING
+	
+	try:
+		request = WatermarkRequest(**task["request"])
+		watermark = get_watermark_algorithm(request.algorithm, **request.params)
+		
+		# 使用线程池处理CPU密集型操作
+		if isinstance(watermark, LogitsWatermark):
+			watermarked_text = await run_in_threadpool(watermark.embed, request.text)
+			metadata = {"type": "logits"}
+		else:
+			watermarked_text = ""  # 语义水印实现
+		
+		with task_lock:
+			tasks[task_id].update(
+				{
+					"status": TaskStatus.COMPLETED,
+					"result": {"watermarked_text": watermarked_text, "metadata": metadata},
+					"completed_at": datetime.now()
+				}
+			)
+	
+	except Exception as e:
+		with task_lock:
+			tasks[task_id].update(
+				{
+					"status": TaskStatus.FAILED,
+					"error": str(e),
+					"completed_at": datetime.now()
+				}
+			)
+
+
+async def process_detect_task(task_id: str):
+	with task_lock:
+		task = tasks.get(task_id)
+		if not task:
+			return
+		task["status"] = TaskStatus.PROCESSING
+	
+	try:
+		# 从任务记录中恢复请求参数
+		request_data = task["request"]
+		detection_request = DetectionRequest(
+			text=request_data["text"],
+			algorithm=request_data["algorithm"],
+			params=request_data["params"]
+		)
+		
+		# 执行检测逻辑
+		watermark = get_watermark_algorithm(
+			detection_request.algorithm,
+			**detection_request.params
+		)
+		
+		# 使用线程池处理同步方法
+		detection_result = await run_in_threadpool(
+			watermark.detect,
+			detection_request.text
+		)
+		
+		# 转换结果格式
+		formatted_result = {
+			"detected": detection_result.detected,
+			"confidence": detection_result.confidence
+		}
+		
+		with task_lock:
+			tasks[task_id].update(
+				{
+					"status": TaskStatus.COMPLETED,
+					"result": formatted_result,
+					"completed_at": datetime.now()
+				}
+			)
+	
+	except Exception as e:
+		error_msg = f"Detection failed: {str(e)}"
+		logging.error(error_msg)
+		with task_lock:
+			tasks[task_id].update(
+				{
+					"status": TaskStatus.FAILED,
+					"error": error_msg,
+					"completed_at": datetime.now()
+				}
+			)
+
+
+@router.get("/tasks/{task_id}", response_model=TaskResponse)
+async def get_task_status(task_id: str):
+	with task_lock:
+		task = tasks.get(task_id)
+	
+	if not task:
+		raise HTTPException(status_code=404, detail="Task not found")
+	
+	return {
+		"task_id": task_id,
+		"status": task["status"],
+		"result": task["result"],
+		"error": task["error"],
+		"created_at": task["created_at"],
+		"completed_at": task["completed_at"]
+	}
+
+
 @router.get("/algorithms", response_model=List[AlgorithmInfo])
 async def list_algorithms() -> Any:
 	"""
@@ -48,79 +185,69 @@ async def list_algorithms() -> Any:
 	"""
 	# 水印列表
 	algorithms = []
-	for name, algo_class in WATERMARK_ALGORITHMS.items(): # 遍历水印包获取水印算法
+	for name, algo_class in WATERMARK_ALGORITHMS.items():  # 遍历水印包获取水印算法
 		algorithms.append(
 			{
 				"name": name,
 				"description": algo_class.__doc__ or "No description available",
-				"type": "logits" if hasattr(algo_class,"get_processor") else "semantic",
+				"type": "logits" if hasattr(algo_class, "get_processor") else "semantic",
 				"params": {
 					# 这里可以添加算法支持的参数说明
 					# 例如DIP的projection_dim, threshold等
 					"key": "秘钥"
-					#TODO: 每个水印的参数系统，和可能的自动调参功能
+					# TODO: 每个水印的参数系统，和可能的自动调参功能
 				}
 			}
 		)
 	return algorithms
 
 
-@router.post("/embed", response_model=WatermarkResponse)
+@router.post("/embed", response_model=TaskResponse)
 async def embed_watermark(
 	request: WatermarkRequest,
+	background_tasks: BackgroundTasks,
 ) -> Any:
-	"""
-	嵌入水印
-	"""
-	try:
-		# 获取水印算法实例
-		watermark = get_watermark_algorithm(request.algorithm, **request.params) # 传入水印名和参数，获取水印算法实例
-		
-		if isinstance(watermark, LogitsWatermark):
-			# Logits级水印
-			# 添加处理器并生成文本
-			logging.debug("LogitsWatermark embeding")
-			watermarked_text = watermark.embed(request.text)
-			metadata = {"type": "logits"}
-		else:
-			# 语义级水印
-			watermarked_text = ""
-			metadata = {"type": "semantic"}
-		
-		return {
-			"watermarked_text": watermarked_text,
-			"metadata": metadata
+	task_id = str(uuid4())
+	created_at = datetime.now()
+	
+	with task_lock:
+		tasks[task_id] = {
+			"status": TaskStatus.PENDING,
+			"created_at": created_at,
+			"request": request.dict(),
+			"result": None,
+			"error": None,
+			"completed_at": None
 		}
 	
-	except Exception as e:
-		raise HTTPException(
-			status_code=status.HTTP_400_BAD_REQUEST,
-			detail=str(e)
-		)
+	background_tasks.add_task(process_embed_task, task_id)
+	return {"task_id": task_id, "status": TaskStatus.PENDING, "created_at": created_at}
 
 
-@router.post("/detect", response_model=DetectionResponse)
+@router.post("/detect", response_model=TaskResponse)
 async def detect_watermark(
 	request: DetectionRequest,
-	current_user: User = Depends(get_auth_user),
+	background_tasks: BackgroundTasks,
+	current_user: User = Depends(get_auth_user),  # 保持鉴权逻辑
 ) -> Any:
-	"""
-	检测水印
-	"""
-	try:
-		# 获取水印算法实例
-		watermark = get_watermark_algorithm(request.algorithm, **request.params)
-		
-		# 执行检测
-		result = watermark.detect(request.text)
-		
-		return result
+	task_id = str(uuid4())
+	created_at = datetime.now()
 	
-	except Exception as e:
-		raise HTTPException(
-			status_code=status.HTTP_400_BAD_REQUEST,
-			detail=str(e)
-		)
+	with task_lock:
+		tasks[task_id] = {
+			"status": TaskStatus.PENDING,
+			"created_at": created_at,
+			"request": {
+				**request.dict(),
+				"user_id": current_user.id  # 记录发起用户
+			},
+			"result": None,
+			"error": None,
+			"completed_at": None
+		}
+		
+		background_tasks.add_task(process_detect_task, task_id)
+		return {"task_id": task_id, "status": TaskStatus.PENDING, "created_at": created_at}
 
 
 @router.post("/visualize")
@@ -134,7 +261,7 @@ async def visualize_watermark(
 	try:
 		# 获取水印算法实例
 		watermark = get_watermark_algorithm(request.algorithm, **request.params)
-
+		
 		# 生成可视化数据
 		visualization_data = watermark.visualize(request.text)
 		
