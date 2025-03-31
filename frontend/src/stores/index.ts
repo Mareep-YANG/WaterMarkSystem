@@ -23,7 +23,7 @@ interface WatermarkState {
 // 用户状态管理
 export const useUserStore = defineStore('user', {
   state: (): UserState => ({
-    token: localStorage.getItem('token'),
+    token: localStorage.getItem('token') || null,
     profile: null,
   }),
   
@@ -54,9 +54,14 @@ export const useUserStore = defineStore('user', {
     },
     
     async login(username: string, password: string) {
-      const { access_token } = await api.auth.login({ username, password });
-      this.setToken(access_token);
-      await this.fetchProfile();
+      try {
+        const response = await api.auth.login({ username, password });
+        this.setToken(response.token); 
+        await this.fetchProfile();
+      } catch (error) {
+        console.error('登录失败:', error);
+        throw error;
+      }
     },
     
     async logout() {

@@ -87,7 +87,7 @@
     <!-- 生成文本对话框 -->
     <el-dialog
       v-model="generateDialogVisible"
-      title="生成文本"
+      title="生成文本" 
       width="650px"
     >
       <div v-if="currentModel">
@@ -101,27 +101,6 @@
               placeholder="请输入提示文本"
               :rows="4"
             />
-          </el-form-item>
-          
-          <el-form-item label="算法" prop="algorithm">
-            <el-select v-model="generateForm.algorithm" style="width: 100%">
-              <el-option label="贪婪搜索" value="greedy" />
-              <el-option label="束搜索" value="beam" />
-              <el-option label="随机采样" value="sampling" />
-            </el-select>
-          </el-form-item>
-          
-          <el-form-item label="密钥" prop="key">
-            <el-input v-model="generateForm.key" placeholder="请输入密钥(可选)" />
-          </el-form-item>
-          
-          <el-form-item label="攻击类型" prop="attacktype">
-            <el-select v-model="generateForm.attacktype" style="width: 100%">
-              <el-option label="无" value="none" />
-              <el-option label="提示注入" value="prompt_injection" />
-              <el-option label="越狱" value="jailbreak" />
-              <el-option label="目标攻击" value="targeted" />
-            </el-select>
           </el-form-item>
           
           <el-form-item 
@@ -251,7 +230,14 @@ const loadModelsList = async () => {
   loading.value = true;
   try {
     const response = await models.getModels();
-    modelsList.value = response.models;
+    // 处理不同可能的响应结构
+    if (response.models && Array.isArray(response.models)) {
+      // 如果响应是 {models: Model[]} 结构
+      modelsList.value = response.models;
+    } else if (Array.isArray(response)) {
+      // 如果响应直接是数组
+      modelsList.value = response;
+    } 
   } catch (error) {
     ElMessage.error('加载模型列表失败');
     console.error('Error loading models:', error);
@@ -380,10 +366,7 @@ const handleGenerateText = async () => {
   
   try {
     const data = {
-      text: generateForm.text,
-      algorithm: generateForm.algorithm,
-      key: generateForm.key,
-      attacktype: generateForm.attacktype
+      prompt: generateForm.text,
     };
     
     // 只有当选择了攻击类型时才添加攻击参数

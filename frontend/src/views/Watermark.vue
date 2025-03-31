@@ -93,7 +93,7 @@
           <div class="result-content"><!-- 结果内容区域 -->
             <el-alert
               v-if="result.detected"
-              :title="'检测到水印，置信度: ' + (result.confidence * 100).toFixed(2) + '%'"
+              :title="'检测到水印，置信度: ' + (result.confidence ).toFixed(2) "
               type="success"
               :closable="false"
             />

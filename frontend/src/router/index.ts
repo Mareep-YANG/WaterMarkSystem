@@ -44,7 +44,16 @@ const routes: RouteRecordRaw[] = [
     name: 'Profile',
     component: () => import('@/views/Profile.vue'), // 懒加载Profile组件
     meta: { requiresAuth: true } // 需要认证的页面
-  }
+  },
+  {
+    path: '/dataset',
+    name: 'Dataset',
+    component: () => import('@/views/Dataset.vue'), // 懒加载model组件
+    meta: {
+      title: 'Dataset',
+       requiresAuth: true 
+    } // 需要认证的页面
+  },
 ];
 
 const router = createRouter({
