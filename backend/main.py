@@ -23,12 +23,11 @@ app = FastAPI(
 	lifespan=lifespan
 )
 
-
 if cfg.CORS_ORIGINS:
 	app.add_middleware(
 		CORSMiddleware,
-	#	allow_origins=[str(origin) for origin in cfg.CORS_ORIGINS],
-		allow_origins=["*"], #TODO:生产环境下改为前端地址
+		#	allow_origins=[str(origin) for origin in cfg.CORS_ORIGINS],
+		allow_origins=["*"],  # TODO:生产环境下改为前端地址
 		allow_credentials=True,
 		allow_methods=["*"],
 		allow_headers=["*"]

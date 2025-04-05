@@ -8,10 +8,10 @@ from pydantic import BaseModel
 
 
 class TaskStatus(str, Enum):
-	PENDING = "pending" #排队
-	PROCESSING = "processing" # 处理中
-	COMPLETED = "completed" # 完成
-	FAILED = "failed" # 失败
+	PENDING = "pending"  # 排队
+	PROCESSING = "processing"  # 处理中
+	COMPLETED = "completed"  # 完成
+	FAILED = "failed"  # 失败
 
 
 class TaskResponse(BaseModel):
@@ -30,6 +30,7 @@ task_lock = Lock()
 router = APIRouter(
 	tags=["tasks"]
 )
+
 
 @router.get("/tasks/{task_id}", response_model=TaskResponse)
 async def get_task_status(task_id: str):

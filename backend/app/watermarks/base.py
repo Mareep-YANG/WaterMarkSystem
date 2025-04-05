@@ -1,8 +1,6 @@
-import logging
 from abc import ABC, abstractmethod
 from typing import Any, Dict
 
-import torch
 from transformers import LogitsProcessor
 
 
@@ -22,7 +20,7 @@ class WatermarkBase(ABC):
 		pass
 	
 	@abstractmethod
-	def detect(self, text: str,  **kwargs) -> Dict[str, Any]:
+	def detect(self, text: str, **kwargs) -> Dict[str, Any]:
 		"""
 		检测水印,模型和分词器从从llmservice
 		Args:
@@ -47,11 +45,9 @@ class WatermarkBase(ABC):
 		pass
 
 
-
-
 class LogitsWatermark(WatermarkBase):
 	"""Logits级水印基类"""
-
+	
 	@abstractmethod
 	def get_processor(self, key: str) -> LogitsProcessor:
 		"""

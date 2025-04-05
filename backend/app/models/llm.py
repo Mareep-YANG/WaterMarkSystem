@@ -29,11 +29,11 @@ class LLMService:
 			# 获取可用设备
 			if torch.cuda.is_available():
 				self.device = "cuda"
-	#		elif hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
-	#			self.device = "mps" 某些算法的计算过程不允许使用MPS
+			#		elif hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
+			#			self.device = "mps" 某些算法的计算过程不允许使用MPS
 			else:
 				self.device = "cpu"
-
+	
 	def get_model(self):
 		"""返回现在模型信息"""
 		if not self.model or not self.tokenizer:
@@ -41,17 +41,21 @@ class LLMService:
 				"status": "not_loaded",
 				"message": "模型尚未加载"
 			}
-
+		
 		model_info = {
 			"status": "loaded",
 			"vocab_size": len(self.tokenizer),  # 获取词汇表大小
-			"model_type": self.model.config.model_type if hasattr(self.model.config, 'model_type') else "unknown",
+			"model_type": self.model.config.model_type if hasattr(
+				self.model.config, 'model_type'
+			) else "unknown",
 			"device": self.device,
-			"model_name": self.model.config.name_or_path if hasattr(self.model.config, 'name_or_path') else "unknown"
+			"model_name": self.model.config.name_or_path if hasattr(
+				self.model.config, 'name_or_path'
+			) else "unknown"
 		}
-
+		
 		return model_info
-
+	
 	async def load_model(self, model_name: Optional[str] = None):
 		"""加载模型"""
 		model_name = model_name or cfg.MODEL_PATH
@@ -84,9 +88,11 @@ class LLMService:
 		"""生成文本"""
 		if not self.model or not self.tokenizer:
 			raise RuntimeError("Model not loaded. Call load_model() first.")
-
-		inputs = self.tokenizer(prompt, return_tensors="pt", add_special_tokens=True).to(self.device)
-
+		
+		inputs = self.tokenizer(prompt, return_tensors="pt", add_special_tokens=True).to(
+			self.device
+		)
+		
 		generation_config = {
 			"max_length": max_length,
 			"temperature": temperature,
@@ -99,6 +105,7 @@ class LLMService:
 			outputs[0],
 			skip_special_tokens=True
 		)
+
 
 # 全局LLM服务实例
 llm_service = LLMService()

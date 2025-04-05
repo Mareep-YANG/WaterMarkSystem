@@ -1,23 +1,20 @@
 from datetime import timedelta
 from typing import Any
 
-from fastapi import (
-	APIRouter, Depends,
-	HTTPException, status
-)
+from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm as OAuth2Form
 from pydantic import BaseModel, EmailStr
 from tortoise.transactions import in_transaction
 
 from ..deps import get_current_active_user
-from ....core import cfg
-from ....core.security import (
+from app.core import cfg
+from app.core.security import (
 	create_access_token,
 	create_api_key,
 	get_password_hash,
-	verify_password,
+	verify_password
 )
-from ....dbModels.user import APIKey, User
+from app.dbModels.user import APIKey, User
 
 router = APIRouter()
 
