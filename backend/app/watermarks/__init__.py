@@ -1,6 +1,5 @@
 from .base import LogitsWatermark, SemanticWatermark, WatermarkBase
 from .dip import DIPWatermark
-from .semstamp import SemStampWatermark
 # 定义各算法的类型
 WATERMARK_TYPES = {
     "dip": "logits",
@@ -34,7 +33,6 @@ __all__ = [
 	"LogitsWatermark",
 	"SemanticWatermark",
 	"DIPWatermark",
-	"SemStampWatermark",
 	"get_watermark_algorithm",
 	"WATERMARK_ALGORITHMS"
 ]
