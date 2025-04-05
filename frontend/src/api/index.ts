@@ -3,18 +3,22 @@ import request from '@/utils/request';
 // 模型接口定义
 export interface Model {
   id: string;
-  name: string;
+  model_name: string;
   description?: string;
-  size?: string;
-  status?: string;
+  is_loaded?: boolean;
   created_at?: string;
   updated_at?: string;
 }
-export interface ModelImportParams {
-  name: string;
-  description?: string;
-  file_path?: string;
-  url?: string;
+interface Dataset {
+  id: string; // 数据集的唯一标识符
+  name: string; // 数据集的名称
+  description: string | null; // 数据集的描述
+  createdAt: string; // 数据集的创建时间
+  updatedAt: string; // 数据集的最后更新时间
+  source: 'uploaded' | 'huggingfacehub'; // 数据集的来源
+  numRows: number; // 数据集中的行数
+  storagePath: string; // 数据集的存储路径
+  status: 'processing' | 'completed' | 'failed'| 'pending'; // 数据集的状态
 }
 
 // 认证相关接口
@@ -97,24 +101,72 @@ export const evaluate = {
 // 模型管理相关接口
 export const models = {
   // 获取所有模型
-  getModels: () => request.get<{models: Model[]}>('/models'),
+  getModels: () => request.get<{models: Model[]}>('/model/models'),
   
   // 获取模型详情
-  getModelById: (id: string) => request.get<Model>(`/models/${id}`),
+  getModelById: (id: string) => request.get<Model>(`/model/${id}`),
   
-  // 下载模型
-  downloadModel: (id: string) => request.get<{download_url: string}>(`/models/${id}/download`),
+  // 更新模型
+  updateModel: (id: string, data: Model) => request.put(`/model/${id}`, data),
   
+  // 添加新的 Huggingface 模型
+  addModel: (data: { model_name: string; description: string }) => request.post('/model/add_model', data),
+
   // 从本地文件导入模型
-  importModelFromFile: (params: ModelImportParams) => 
-    request.post<Model>('/models/import', params),
+  loadModel: (id: string) => request.post(`/model/${id}/load`),
   
-  // 从URL导入模型
-  importModelFromUrl: (params: ModelImportParams) => 
-    request.post<Model>('/models/import-from-url', params),
+  // 生成文本
+  generateText: (id: string, data: { prompt: string; }) => request.post(`/model/${id}/generate`, data),
   
   // 删除模型
-  deleteModel: (id: string) => request.delete<{success: boolean}>(`/models/${id}`),
+  deleteModel: (id: string) => request.delete(`/model/${id}`),
+};
+
+// 数据集管理相关接口
+export const datasets = {
+  // 获取所有数据集
+  getDatasets: () => 
+    request.get('/dataset/datasets') as Promise<{datasets: Dataset[]}>,
+  
+  // 获取数据集详情
+  getDatasetById: (datasetId: string) => 
+    request.get(`/dataset/datasets/${datasetId}`) as Promise<Dataset>,
+  
+  // 上传数据集
+  uploadDataset: (formData: FormData) => 
+    request.post('/dataset/datasets/upload', {
+      ...formData,
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    }) as Promise<Dataset>,
+  
+  // 从HuggingFace导入数据集
+  importFromHuggingFace: (params: {
+    datasetname: string;
+    description?: string;
+  }) => request.post('/dataset/datasets/from_huggingface', params) as Promise<Dataset>,
+};
+// 创建上传数据集的FormData助手函数
+export const createDatasetFormData = (
+  file: File,
+  datasetname: string,
+  description?: string,
+  formattype?: string
+): FormData => {
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('datasetname', datasetname);
+  
+  if (description) {
+    formData.append('description', description);
+  }
+  
+  if (formattype) {
+    formData.append('formattype', formattype);
+  }
+  
+  return formData;
 };
 
 export default {
@@ -122,4 +174,5 @@ export default {
   watermark,
   evaluate,
   models,
+  datasets,
 };

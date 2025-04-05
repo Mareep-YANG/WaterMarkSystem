@@ -1,7 +1,7 @@
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
 import { ElMessage } from 'element-plus';
 
-const baseURL = 'http://localhost:8000/api/v1';
+const baseURL = 'http://192.168.1.141:8000/api/v1';
 
 class Request {
   private instance: AxiosInstance;
@@ -9,7 +9,7 @@ class Request {
   constructor() {
     this.instance = axios.create({
       baseURL,
-      timeout: 10000,
+      timeout: 100000000,
       headers: {
         'Content-Type': 'application/json',
       },

@@ -92,6 +92,7 @@ const handleSubmit = async () => {
     await userStore.login(formData.username, formData.password);
 
     ElMessage.success('登录成功');
+    
     const redirect = route.query.redirect as string;
     await router.push(redirect || '/');
   } catch (error: any) {
