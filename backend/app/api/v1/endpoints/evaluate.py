@@ -109,13 +109,12 @@ async def list_attackers() -> Any:
     """
     attackers_results = []
     for name, attacker_class in ATTACKERS.items():
+        attacker = attacker_class()
         attackers_results.append(
             {
                 "name": name,
-                "description": attacker_class.__doc__ or "No description available",
-                "params": {
-                    # 这里可以添加攻击器支持的参数说明
-                }
+                "description": attacker.__doc__ or "No description available",
+                "params":  attacker.to_config()
             }
         )
     return attackers_results

@@ -2,27 +2,33 @@ from typing import Dict, Any
 
 from openai import OpenAI
 
+from app.core.Configurable import configurable, ConfigField
 from app.evaluation.attacker.TextWatermarkAttacker import TextWatermarkAttacker
 
 
 class LLMParaphraserAttacker(TextWatermarkAttacker):
     """Paraphrase a text using the GPT model."""
-
-    def __init__(self, config: Dict[str, Any] = None):
+    provider = ConfigField()
+    model = ConfigField()
+    prompt = ConfigField()
+    api_key = ConfigField()
+    base_url = ConfigField()
+    def __init__(self, provider="openai", model="gpt-3.5-turbo", prompt="Please paraphrase the following text: ",
+                 api_key=None, base_url=None):
         """
             Initialize the GPT paraphraser.
         """
-        super().__init__(config)
-        self.provider = config["provider"]
-        self.model = config["model"]
-        self.prompt = config["prompt"]
-        self.api_key = config["api_key"]
-        self.base_url = config["base_url"]
+        self.provider = provider
+        self.model = model
+        self.prompt = prompt
+        self.api_key = api_key
+        self.base_url = base_url
+
 
 
     def attack(self, text: str, **kwargs) -> str:
         if self.provider == "openai":
-            openai_client = OpenAI(api_key=self.api_key,base_url=self.base_url)
+            openai_client = OpenAI(api_key=self.api_key, base_url=self.base_url)
             completion = openai_client.chat.completions.create(
                 messages=[
                     {'role': 'system', 'content': "Your are a helpful assistant to rewrite the text."},
@@ -34,4 +40,3 @@ class LLMParaphraserAttacker(TextWatermarkAttacker):
             return paraphrased_text
         else:
             raise ValueError(f"Unsupported provider: {self.provider}")
-

@@ -3,18 +3,20 @@ from typing import Dict, Any
 
 import nltk
 from nltk.corpus import wordnet
+
+from app.core.Configurable import ConfigField
 from app.evaluation.attacker.TextWatermarkAttacker import TextWatermarkAttacker
 
 
 class SynonymSubstitutionAttacker(TextWatermarkAttacker):
     """Randomly replace words with synonyms from WordNet."""
-    def __init__(self, config: Dict[str, Any] = None):
+    ratio = ConfigField()
+    def __init__(self,ratio: float = 0.1):
         """
             Initialize the synonym substitution editor.
         """
-        super().__init__(config)
         nltk.download('wordnet')
-        self.ratio = self.config["ratio"]
+        self.ratio = ratio
 
     def attack(self, text: str, **kwargs) -> str:
         """Randomly replace words with synonyms from WordNet."""
