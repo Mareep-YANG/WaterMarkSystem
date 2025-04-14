@@ -1,17 +1,19 @@
 import random
 from typing import Dict, Any
 
+from app.core.Configurable import ConfigField
 from app.evaluation.attacker import TextWatermarkAttacker
 
 
 class WordDeletionAttacker(TextWatermarkAttacker):
     """Delete words randomly from the text."""
-    def __init__(self, config: Dict[str, Any] = None):
+    ratio = ConfigField()
+    def __init__(self, ratio: float = 0.1):
         """
             Initialize the word deletion editor.
         """
-        super().__init__(config)
-        self.ratio = self.config["ratio"]
+
+        self.ratio = ratio
 
     def attack(self, text: str, **kwargs) -> str:
         # Handle empty string input

@@ -6,6 +6,7 @@ from typing import Any, Dict, Union, Tuple
 from pydantic import BaseModel, Field
 from transformers import LogitsProcessor
 
+from app.core.Configurable import ConfigField
 from app.models.llm import llm_service
 from app.models.GenerationConfig import GenerationConfig
 from app.watermarks import LogitsWatermark
@@ -49,10 +50,18 @@ class DipProcessor(LogitsProcessor):
 
 class DIPWatermark(LogitsWatermark):
     """DiP watermarking algorithm implementation"""
-
-    def __init__(self, key: str,gamma=0.5, alpha=0.45, ignore_history_generation=False,
-                 ignore_history_detection=False, z_threshold=1.513, prefix_length=5):
+    key = ConfigField()
+    gamma = ConfigField()
+    alpha = ConfigField()
+    ignore_history_generation = ConfigField()
+    ignore_history_detection = ConfigField()
+    z_threshold = ConfigField()
+    prefix_length = ConfigField()
+    def __init__(self, key="your key", gamma=0.5, alpha=0.45, ignore_history_generation=False,
+                 ignore_history_detection=False, z_threshold=1.513, prefix_length=5,*args, **kwargs):
         """Initialize the DiP watermark parameters"""
+
+        super().__init__(*args, **kwargs)
         self.gamma = gamma
         self.alpha = alpha
         self.ignore_history_generation = ignore_history_generation
@@ -64,12 +73,6 @@ class DIPWatermark(LogitsWatermark):
         self.key = key
         llm_service.clear_processors()
         llm_service.add_processor(DipProcessor(self))
-        self.generation_config = GenerationConfig(
-            logits_processor=llm_service.processors,
-            min_length=230,
-            max_length=500,
-            no_repeat_ngram_size=4
-        )
     def embed(self, prompt: str) -> str:
         """Embed watermark into logits"""
         # 生成模式
@@ -141,7 +144,7 @@ class DIPWatermark(LogitsWatermark):
 
         m = hashlib.sha256()
         m.update(context_code)
-     #   m.update(self.key.encode('utf-8'))
+        m.update(self.key.encode('utf-8'))
 
         full_hash = m.digest()
         seed = int.from_bytes(full_hash, "big") % (2 ** 32 - 1)

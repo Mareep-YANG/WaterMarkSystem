@@ -48,18 +48,14 @@ async def list_algorithms() -> Any:
 	"""
 	# 水印列表
 	algorithms = []
-	for name, algo_class in WATERMARK_ALGORITHMS.items(): # 遍历水印包获取水印算法
+	for name, algo_class in WATERMARK_ALGORITHMS.items():
+		algo = algo_class() # 遍历水印包获取水印算法
 		algorithms.append(
 			{
 				"name": name,
-				"description": algo_class.__doc__ or "No description available",
-				"type": "logits" if hasattr(algo_class,"get_processor") else "semantic",
-				"params": {
-					# 这里可以添加算法支持的参数说明
-					# 例如DIP的projection_dim, threshold等
-					"key": "秘钥"
-					#TODO: 每个水印的参数系统，和可能的自动调参功能
-				}
+				"description": algo.__doc__ or "No description available",
+				"type": "logits" if hasattr(algo,"get_processor") else "semantic",
+				"params":algo.to_config()
 			}
 		)
 	return algorithms

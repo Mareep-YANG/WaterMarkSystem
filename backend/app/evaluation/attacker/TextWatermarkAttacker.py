@@ -1,8 +1,10 @@
 from abc import ABC, abstractmethod
 from typing import List, Dict, Any, Optional, Union, Tuple
 
+from app.core.Configurable import configurable
 
 
+@configurable
 class TextWatermarkAttacker(ABC):
     """
     大模型水印文本攻击处理器基类
@@ -10,15 +12,6 @@ class TextWatermarkAttacker(ABC):
     用于对含有水印的LLM生成文本进行攻击，
     尝试在保持语义和可读性的前提下移除或降低水印的可检测性。
     """
-
-    def __init__(self, config: Dict[str, Any] = None):
-        """
-        初始化攻击处理器
-
-        Args:
-            config: 配置参数字典
-        """
-        self.config = config or {}
 
     @abstractmethod
     def attack(self, text: str, **kwargs) -> str:
