@@ -32,11 +32,15 @@
         </el-table-column>
         <el-table-column prop="source" label="来源" width="120">
           <template #default="scope">
-            <el-tag v-if="scope.row.source === 'uploaded'" type="primary">上传</el-tag>
-            <el-tag v-else-if="scope.row.source === 'huggingfacehub'" type="success">HuggingFace</el-tag>
+            <el-tag v-if="scope.row.source === 'uploaded'" type="primary">用户上传</el-tag>
+            <el-tag v-else-if="scope.row.source === 'huggingface_hub'" type="success">HuggingFace Hub</el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="numRows" label="行数" width="100" />
+        <el-table-column prop="numRows" label="行数" width="100">
+          <template #default="scope">
+            {{ scope.row.num_rows }}
+          </template>
+        </el-table-column>
         <el-table-column prop="status" label="状态" width="100">
           <template #default="scope">
             <el-tag :type="getStatusType(scope.row.status)">
@@ -196,9 +200,9 @@
         <el-descriptions-item label="描述">{{ currentDataset.description || '无描述' }}</el-descriptions-item>
         <el-descriptions-item label="来源">
           <el-tag v-if="currentDataset.source === 'uploaded'" type="primary">用户上传</el-tag>
-          <el-tag v-else-if="currentDataset.source === 'huggingfacehub'" type="success">HuggingFace Hub</el-tag>
+          <el-tag v-else-if="currentDataset.source === 'huggingface_hub'" type="success">HuggingFace Hub</el-tag>
         </el-descriptions-item>
-        <el-descriptions-item label="行数">{{ currentDataset.numRows }}</el-descriptions-item>
+        <el-descriptions-item label="行数">{{ currentDataset.num_rows }}</el-descriptions-item>
         <el-descriptions-item label="状态">
           <el-tag :type="getStatusType(currentDataset.status)">
             {{ getStatusText(currentDataset.status) }}
@@ -233,8 +237,8 @@ interface Dataset {
   description: string | null;
   createdAt: string;
   updatedAt: string;
-  source: 'uploaded' | 'huggingfacehub';
-  numRows: number;
+  source: 'uploaded' | 'huggingface_hub';
+  num_rows: number;
   storagePath: string;
   status: 'processing' | 'completed' | 'failed' | 'pending';
 }
@@ -399,7 +403,26 @@ const submitImport = async () => {
 
 // 格式化时间显示
 const formatTime = (time: string) => {
-  return new Date(time).toLocaleString();
+  try {
+    // 使用正则表达式提取年、月、日、时、分、秒
+    const regex = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})/;
+    const match = time.match(regex);
+    
+    if (match) {
+      const [, year, month, day, hour, minute, second] = match;
+      return `${year}-${month}-${day} ${hour}:${minute}:${second}`;
+    }
+    
+    // 如果正则匹配失败，尝试使用Date对象解析
+    const date = new Date(time);
+    if (!isNaN(date.getTime())) {
+      return date.toLocaleString();
+    }
+    
+    return '无效时间';
+  } catch (error) {
+    return '无效时间';
+  }
 };
 
 // 获取状态对应的标签类型
