@@ -190,7 +190,7 @@ async def process_generate_text_task(task_id: str):
 			)
 
 
-@router.post("/add_model", response_model=HuggingfaceModelResponse)
+@router.post("/add_model")
 async def create_model(
 	model_data: HuggingfaceModelCreate,
 	background_tasks: BackgroundTasks

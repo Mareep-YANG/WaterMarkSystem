@@ -119,8 +119,8 @@ async def process_detect_watermark_task(task_id: str):
 				{
 					"status": tasks.TaskStatus.COMPLETED,
 					"result": {
-						"detected": detection_result.detected,
-						"confidence": detection_result.confidence
+						"detected": detection_result["detected"],
+						"confidence": detection_result["confidence"]
 					},
 					"completed_at": datetime.now()
 				}

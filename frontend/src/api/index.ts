@@ -13,12 +13,22 @@ interface Dataset {
   id: string; // 数据集的唯一标识符
   name: string; // 数据集的名称
   description: string | null; // 数据集的描述
-  createdAt: string; // 数据集的创建时间
-  updatedAt: string; // 数据集的最后更新时间
+  created_at: string; // 数据集的创建时间
+  updated_at: string; // 数据集的最后更新时间
   source: 'uploaded' | 'huggingface_hub'; // 数据集的来源
   num_rows: number; // 数据集中的行数
-  storagePath: string; // 数据集的存储路径
+  storage_path: string; // 数据集的存储路径
   status: 'processing' | 'completed' | 'failed'| 'pending'; // 数据集的状态
+}
+
+// 任务相关接口定义
+export interface TaskResponse {
+  task_id: string;
+  status: 'pending' | 'processing' | 'completed' | 'failed';
+  result?: any;
+  error?: string;
+  created_at: string;
+  completed_at?: string;
 }
 
 // 认证相关接口
@@ -71,7 +81,7 @@ export const watermark = {
     algorithm: string;
     key: string;
     params?: Record<string, any>;
-  }) => request.post('/watermark/embed', data),
+  }) => request.post<TaskResponse>('/watermark/embed', data),
 
   // 检测水印
   detect: (data: {
@@ -79,7 +89,7 @@ export const watermark = {
     algorithm: string;
     key: string;
     params?: Record<string, any>;
-  }) => request.post('/watermark/detect', data),
+  }) => request.post<TaskResponse>('/watermark/detect', data),
 
   // 可视化水印
   visualize: (data: {
@@ -88,6 +98,9 @@ export const watermark = {
     key: string;
     params?: Record<string, any>;
   }) => request.post('/watermark/visualize', data),
+
+  // 获取任务状态
+  getTaskStatus: (taskId: string) => request.get<TaskResponse>(`/tasks/${taskId}`),
 };
 
 // 评估相关接口
@@ -100,7 +113,7 @@ export const evaluate = {
     key: string;
     metrics: string[];
     params?: Record<string, any>;
-  }) => request.post('/evaluate/metrics', data),
+  }) => request.post<TaskResponse>('/evaluate/metrics', data),
 
   // 攻击测试
   attack: (data: {
@@ -115,7 +128,7 @@ export const evaluate = {
 // 模型管理相关接口
 export const models = {
   // 获取所有模型
-  getModels: () => request.get<{models: Model[]}>('/model/models'),
+  getModels: () => request.get<Model[]>('/model/models'),
   
   // 获取模型详情
   getModelById: (id: string) => request.get<Model>(`/model/${id}`),
@@ -127,10 +140,10 @@ export const models = {
   addModel: (data: { model_name: string; description: string }) => request.post('/model/add_model', data),
 
   // 从本地文件导入模型
-  loadModel: (id: string) => request.post(`/model/${id}/load`),
+  loadModel: (id: string) => request.post<TaskResponse>(`/model/${id}/load`),
   
   // 生成文本
-  generateText: (id: string, data: { prompt: string; }) => request.post(`/model/${id}/generate`, data),
+  generateText: (id: string, data: { prompt: string; }) => request.post<TaskResponse>(`/model/${id}/generate`, data),
   
   // 删除模型
   deleteModel: (id: string) => request.delete(`/model/${id}`),
@@ -140,7 +153,7 @@ export const models = {
 export const datasets = {
   // 获取所有数据集
   getDatasets: () => 
-    request.get('/dataset/datasets') as Promise<{datasets: Dataset[]}>,
+    request.get<Dataset[]>('/dataset/datasets'),
   
   // 获取数据集详情
   getDatasetById: (datasetId: string) => 
@@ -148,18 +161,24 @@ export const datasets = {
   
   // 上传数据集
   uploadDataset: (formData: FormData) => 
-    request.post('/dataset/datasets/upload', {
-      ...formData,
+    request.post<TaskResponse>('/dataset/datasets/upload', formData, {
       headers: {
         'Content-Type': 'multipart/form-data'
       }
-    }) as Promise<Dataset>,
+    }),
   
   // 从HuggingFace导入数据集
   importFromHuggingFace: (params: {
-    datasetname: string;
+    dataset_name: string;
     description?: string;
-  }) => request.post('/dataset/datasets/from_huggingface', params) as Promise<Dataset>,
+  }) => request.post<TaskResponse>(`/dataset/datasets/from_huggingface?dataset_name=${params.dataset_name}&description=${params.description || ''}`),
+
+  // 删除数据集
+  deleteDataset: (datasetId: string) => 
+    request.delete(`/dataset/datasets/${datasetId}`),
+
+  // 获取任务状态
+  getTaskStatus: (taskId: string) => request.get<TaskResponse>(`/tasks/${taskId}`),
 };
 // 创建上传数据集的FormData助手函数
 export const createDatasetFormData = (

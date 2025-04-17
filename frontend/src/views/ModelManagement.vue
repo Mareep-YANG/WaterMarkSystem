@@ -126,7 +126,7 @@
         </el-form>
         
         <div v-if="generating" class="generating-indicator">
-          <el-progress type="circle" :percentage="generatingProgress" />
+          <el-progress type="circle" :percentage="100" status="success" />
           <p>正在生成文本...</p>
         </div>
         
@@ -136,6 +136,9 @@
             <div class="text-content">{{ generatedText }}</div>
           </el-card>
         </div>
+
+        <!-- 显示任务状态 -->
+        <TaskStatus v-if="currentTaskId" :task-id="currentTaskId" />
       </div>
       
       <template #footer>
@@ -159,17 +162,19 @@
 import { ref, reactive, computed, onMounted, watch } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import type { FormInstance, FormRules } from 'element-plus';
-import { models, Model } from '@/api/index';
+import { useModelStore } from '@/stores';
+import { useTaskStore } from '@/stores/task';
+import TaskStatus from '@/components/TaskStatus.vue';
 
 // 数据和状态
 const loading = ref(false);
 const submitting = ref(false);
 const generating = ref(false);
-const generatingProgress = ref(0);
 const modelsList = ref<Model[]>([]);
 const currentModel = ref<Model | null>(null);
 const generatedText = ref('');
 const paramsError = ref('');
+const currentTaskId = ref<string | null>(null);
 
 // 对话框控制
 const addModelDialogVisible = ref(false);
@@ -229,15 +234,9 @@ const isGenerateFormValid = computed(() => {
 const loadModelsList = async () => {
   loading.value = true;
   try {
-    const response = await models.getModels();
-    // 处理不同可能的响应结构
-    if (response.models && Array.isArray(response.models)) {
-      // 如果响应是 {models: Model[]} 结构
-      modelsList.value = response.models;
-    } else if (Array.isArray(response)) {
-      // 如果响应直接是数组
-      modelsList.value = response;
-    } 
+    const modelStore = useModelStore();
+    await modelStore.fetchModels();
+    modelsList.value = modelStore.models;
   } catch (error) {
     ElMessage.error('加载模型列表失败');
     console.error('Error loading models:', error);
@@ -261,7 +260,8 @@ const handleAddModel = async () => {
     if (valid) {
       submitting.value = true;
       try {
-        await models.addModel({
+        const modelStore = useModelStore();
+        await modelStore.addModel({
           model_name: modelForm.model_name,
           description: modelForm.description
         });
@@ -289,7 +289,8 @@ const openAddModelDialog = () => {
 const handleLoadModel = async (id: string) => {
   try {
     loading.value = true;
-    await models.loadModel(id);
+    const modelStore = useModelStore();
+    await modelStore.loadModel(id);
     ElMessage.success('模型加载成功');
     loadModelsList(); // 刷新列表
   } catch (error) {
@@ -314,7 +315,8 @@ const handleDeleteModel = (id: string) => {
   .then(async () => {
     try {
       loading.value = true;
-      await models.deleteModel(id);
+      const modelStore = useModelStore();
+      await modelStore.deleteModel(id);
       ElMessage.success('模型删除成功');
       loadModelsList(); // 刷新列表
     } catch (error) {
@@ -342,18 +344,6 @@ const openGenerateDialog = (model: Model) => {
   generateDialogVisible.value = true;
 };
 
-// 模拟生成进度
-const simulateProgress = () => {
-  generatingProgress.value = 0;
-  const interval = setInterval(() => {
-    generatingProgress.value += 10;
-    if (generatingProgress.value >= 100) {
-      clearInterval(interval);
-    }
-  }, 300);
-  return interval;
-};
-
 // 生成文本
 const handleGenerateText = async () => {
   if (!currentModel.value || !isGenerateFormValid.value) return;
@@ -361,29 +351,34 @@ const handleGenerateText = async () => {
   generating.value = true;
   generatedText.value = '';
   
-  // 模拟进度条
-  const progressInterval = simulateProgress();
-  
   try {
-    const data = {
-      prompt: generateForm.text,
-    };
+    const modelStore = useModelStore();
+    const taskId = await modelStore.generateText(currentModel.value.id, generateForm.text);
+    currentTaskId.value = taskId;
     
-    // 只有当选择了攻击类型时才添加攻击参数
-    if (generateForm.attacktype !== 'none') {
-      Object.assign(data, { attackparams: generateForm.attackparams });
-    }
-    
-    const response = await models.generateText(currentModel.value.id, data);
-    generatedText.value = response.generated_text || JSON.stringify(response);
-    ElMessage.success('文本生成成功');
+    // 监听任务状态变化
+    const taskStore = useTaskStore();
+    await new Promise((resolve, reject) => {
+      taskStore.startPolling(
+        taskId,
+        (result) => {
+          if (result && result.result && result.result.generated_text) {
+            generatedText.value = result.result.generated_text;
+            ElMessage.success('文本生成成功');
+          }
+          resolve(result);
+        },
+        (error) => {
+          ElMessage.error('文本生成失败');
+          reject(error);
+        }
+      );
+    });
   } catch (error) {
-    ElMessage.error('文本生成失败');
     console.error('Error generating text:', error);
   } finally {
-    clearInterval(progressInterval);
-    generatingProgress.value = 100;
     generating.value = false;
+    currentTaskId.value = null;
   }
 };
 
@@ -391,6 +386,11 @@ const handleGenerateText = async () => {
 onMounted(() => {
   loadModelsList();
 });
+
+// 监听store中的models变化
+watch(() => useModelStore().models, (newModels) => {
+  modelsList.value = newModels;
+}, { deep: true });
 </script>
 
 <style scoped>

@@ -69,6 +69,7 @@
                 type="primary"
                 :loading="loading.embed"
                 @click="handleEmbed"
+                :disabled="!!currentTaskId"
               >
                 嵌入水印
               </el-button>
@@ -76,6 +77,7 @@
                 type="success"
                 :loading="loading.detect"
                 @click="handleDetect"
+                :disabled="!!currentTaskId"
               >
                 检测水印
               </el-button>
@@ -85,6 +87,38 @@
       </el-col>
 
       <el-col :span="12"><!-- 使用Element UI的el-col组件，设置列宽度为12 -->
+        <el-card v-if="currentTaskId">
+          <template #header>
+            <div class="card-header">
+              <h3>任务状态</h3>
+              <el-button
+                type="danger"
+                size="small"
+                @click="cancelTask"
+                :disabled="taskStatus === 'completed' || taskStatus === 'failed'"
+              >
+                取消任务
+              </el-button>
+            </div>
+          </template>
+          
+          <div class="task-status">
+            <el-steps :active="getStepActive" finish-status="success">
+              <el-step title="等待中" :description="taskStatus === 'pending' ? '任务已创建' : ''" />
+              <el-step title="处理中" :description="taskStatus === 'processing' ? '正在处理...' : ''" />
+              <el-step title="完成" :description="taskStatus === 'completed' ? '任务已完成' : ''" />
+            </el-steps>
+            
+            <div v-if="taskError" class="task-error">
+              <el-alert
+                :title="taskError"
+                type="error"
+                :closable="false"
+              />
+            </div>
+          </div>
+        </el-card>
+
         <el-card v-if="result.watermarked"><!-- 处理结果卡片 -->
           <template #header>
             <h3>处理结果</h3><!-- 处理结果标题 -->
@@ -126,11 +160,17 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted, computed, watch, nextTick } from 'vue'; // 引入Vue的相关函数
 import { useWatermarkStore } from '@/stores'; // 引入水印存储
+import { useTaskStore } from '@/stores/task';
 import { ElMessage } from 'element-plus'; // 引入Element Plus的消息组件
 import * as echarts from 'echarts'; // 引入ECharts库
 
 const watermarkStore = useWatermarkStore(); // 获取水印存储实例
+const taskStore = useTaskStore();
 const chartRef = ref<HTMLElement>(); // 图表引用
+
+const currentTaskId = ref<string>('');
+const taskStatus = ref<'pending' | 'processing' | 'completed' | 'failed'>('pending');
+const taskError = ref<string>('');
 
 const algorithms = computed(() => watermarkStore.algorithms); // 计算属性，获取算法列表
 const currentAlgorithm = computed({
@@ -142,6 +182,20 @@ const currentAlgorithmParams = computed(() => {
   const algo = algorithms.value.find(a => a.name === currentAlgorithm.value);
   return algo?.params || {};
 }); // 计算属性，获取当前算法的参数
+
+const getStepActive = computed(() => {
+  switch (taskStatus.value) {
+    case 'pending':
+      return 0;
+    case 'processing':
+      return 1;
+    case 'completed':
+    case 'failed':
+      return 2;
+    default:
+      return 0;
+  }
+});
 
 const formData = reactive({
   text: '', // 输入文本
@@ -185,54 +239,122 @@ const updateVisualization = (data: any) => {// 定义一个函数用于更新图
   }
 };
 
-const handleEmbed = async () => {// 定义一个异步函数用于处理水印嵌入
-  if (!formData.text || !formData.key) { // 检查文本和密钥是否输入
+const handleEmbed = async () => {
+  if (!formData.text || !formData.key) {
     ElMessage.warning('请输入文本和密钥');
     return;
   }
 
   try {
-    loading.embed = true;// 开始嵌入水印，显示加载状态
-    const response = await watermarkStore.embedWatermark(// 调用水印存储的方法嵌入水印
+    loading.embed = true;
+    const taskId = await watermarkStore.embedWatermark(
       formData.text,
       formData.key,
       formData.params
     );
-    result.watermarked = response.watermarked_text;// 更新水印文本结果
-    ElMessage.success('水印嵌入成功');// 显示成功消息
+    
+    currentTaskId.value = taskId;
+    taskStatus.value = 'pending';
+    taskError.value = '';
+    
+    taskStore.startPolling(
+      taskId,
+      (taskResponse) => {
+        if (taskResponse.status === 'completed') {
+          taskStatus.value = 'completed';
+          result.watermarked = taskResponse.result.watermarked_text;
+          currentTaskId.value = '';
+          ElMessage.success('水印嵌入成功');
+        } else if (taskResponse.status === 'failed') {
+          taskStatus.value = 'failed';
+          taskError.value = taskResponse.error || '任务执行失败';
+          currentTaskId.value = '';
+          ElMessage.error(taskResponse.error || '任务执行失败');
+        } else {
+          taskStatus.value = taskResponse.status;
+        }
+      },
+      (error) => {
+        taskStatus.value = 'failed';
+        taskError.value = error;
+        currentTaskId.value = '';
+        ElMessage.error(error);
+      }
+    );
   } catch (error: any) {
-    ElMessage.error(error.message || '水印嵌入失败');// 显示错误消息
+    ElMessage.error(error.message || '水印嵌入失败');
+    currentTaskId.value = '';
   } finally {
-    loading.embed = false;// 嵌入完成，隐藏加载状态
+    loading.embed = false;
   }
 };
 
-const handleDetect = async () => {// 定义一个异步函数用于处理水印检测
-  if (!result.watermarked || !formData.key) {// 检查是否已嵌入水印和密钥是否输入
+const handleDetect = async () => {
+  if (!result.watermarked || !formData.key) {
     ElMessage.warning('请先嵌入水印');
     return;
   }
 
   try { 
-    loading.detect = true;// 开始检测水印，显示加载状态
-    const response = await watermarkStore.detectWatermark(// 调用水印存储的方法检测水印
+    loading.detect = true;
+    const taskId = await watermarkStore.detectWatermark(
       result.watermarked,
       formData.key,
       formData.params
     );
-    result.detected = response.detected;
-    result.confidence = response.confidence;
-    result.visualization = response.details;// 更新检测结果
     
-    if (result.visualization) {// 如果有可视化数据，更新图表
-      nextTick(() => {
-        updateVisualization(result.visualization);
-      });
-    }
+    currentTaskId.value = taskId;
+    taskStatus.value = 'pending';
+    taskError.value = '';
+    
+    taskStore.startPolling(
+      taskId,
+      (taskResponse) => {
+        if (taskResponse.status === 'completed') {
+          taskStatus.value = 'completed';
+          result.detected = taskResponse.result.detected;
+          result.confidence = taskResponse.result.confidence;
+          result.visualization = taskResponse.result.details;
+          currentTaskId.value = '';
+          
+          if (result.visualization) {
+            nextTick(() => {
+              updateVisualization(result.visualization);
+            });
+          }
+          ElMessage.success('水印检测完成');
+        } else if (taskResponse.status === 'failed') {
+          taskStatus.value = 'failed';
+          taskError.value = taskResponse.error || '任务执行失败';
+          currentTaskId.value = '';
+          ElMessage.error(taskResponse.error || '任务执行失败');
+        } else {
+          taskStatus.value = taskResponse.status;
+        }
+      },
+      (error) => {
+        taskStatus.value = 'failed';
+        taskError.value = error;
+        currentTaskId.value = '';
+        ElMessage.error(error);
+      }
+    );
   } catch (error: any) {
-    ElMessage.error(error.message || '水印检测失败');// 显示错误消息
+    ElMessage.error(error.message || '水印检测失败');
+    currentTaskId.value = '';
   } finally {
-    loading.detect = false;// 检测完成，隐藏加载状态
+    loading.detect = false;
+  }
+};
+
+const cancelTask = () => {
+  if (currentTaskId.value) {
+    taskStore.stopPolling(currentTaskId.value);
+    taskStore.clearTask(currentTaskId.value);
+    currentTaskId.value = '';
+    taskStatus.value = 'pending';
+    taskError.value = '';
+    ElMessage.info('任务已取消');
   }
 };
 
@@ -275,5 +397,13 @@ onMounted(async () => {// 组件挂载时执行的函数
 .chart-container {
   height: 300px; /* 设置图表容器高度 */
   margin-top: 10px; /* 设置图表容器的上边距 */
+}
+
+.task-status {
+  padding: 20px;
+}
+
+.task-error {
+  margin-top: 20px;
 }
 </style>

@@ -109,7 +109,7 @@ async def upload_dataset(
 	"""
 	上传数据集
 	"""
-	task_id = uuid.uuid4()
+	task_id = str(uuid.uuid4())
 	created_at = datetime.now()
 	
 	# 保存文件
@@ -132,7 +132,7 @@ async def upload_dataset(
 	
 	# 记录任务信息
 	with tasks.task_lock:
-		tasks.tasks[str(task_id)] = {
+		tasks.tasks[task_id] = {
 			"status": tasks.TaskStatus.PENDING,
 			"created_at": created_at,
 			"request": {
@@ -271,3 +271,23 @@ async def list_datasets():
 	"""
 	datasets_queryset = Dataset.all()
 	return await DatasetPydantic.from_queryset(datasets_queryset)
+
+
+@router.delete("/datasets/{dataset_id}")
+async def delete_dataset(dataset_id: uuid.UUID):
+	"""
+	删除指定数据集
+	"""
+	dataset = await Dataset.get_or_none(id=dataset_id)
+	if not dataset:
+		raise HTTPException(status_code=404, detail="Dataset not found")
+	
+	# 删除数据集文件
+	if os.path.exists(dataset.storage_path):
+		import shutil
+		shutil.rmtree(dataset.storage_path)
+	
+	# 删除数据库记录
+	await dataset.delete()
+	
+	return {"message": "Dataset deleted successfully"}

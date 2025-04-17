@@ -14,7 +14,20 @@ async def process_uploaded_dataset(file_path: str, dataset_id: uuid.UUID, format
 		dataset = await Dataset.get(id=dataset_id)
 		
 		# 转换为HF Dataset格式
-		if format_type == "csv":
+		if format_type == "auto":
+			# 根据文件扩展名自动检测格式
+			file_ext = os.path.splitext(file_path)[1].lower()
+			if file_ext == ".csv":
+				hf_dataset = HFDataset.from_csv(file_path)
+			elif file_ext == ".json":
+				hf_dataset = HFDataset.from_json(file_path)
+			elif file_ext in [".txt", ".text"]:
+				with open(file_path, "r") as f:
+					texts = [line.strip() for line in f]
+				hf_dataset = HFDataset.from_dict({"text": texts})
+			else:
+				raise ValueError(f"Unsupported file extension: {file_ext}")
+		elif format_type == "csv":
 			hf_dataset = HFDataset.from_csv(file_path)
 		elif format_type == "json":
 			hf_dataset = HFDataset.from_json(file_path)
@@ -23,8 +36,6 @@ async def process_uploaded_dataset(file_path: str, dataset_id: uuid.UUID, format
 				texts = [line.strip() for line in f]
 			hf_dataset = HFDataset.from_dict({"text": texts})
 		else:
-			# 自动检测并导入
-			# 这里需要根据文件类型实现更复杂的逻辑
 			raise ValueError(f"Unsupported format: {format_type}")
 		
 		# 创建存储目录

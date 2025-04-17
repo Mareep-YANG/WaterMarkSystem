@@ -3,7 +3,7 @@ import { ElMessage } from 'element-plus';
 import { useUserStore } from '@/stores';
 import router from '@/router'; 
 
-const baseURL = 'http://192.168.1.141:8000/api/v1';
+const baseURL = 'http://127.0.0.1:8000/api/v1';
 
 class Request {
   private instance: AxiosInstance;
@@ -70,8 +70,8 @@ class Request {
     return this.request({ method: 'GET', url, params });
   }
 
-  public post<T = any>(url: string, data?: any): Promise<T> {
-    return this.request({ method: 'POST', url, data });
+  public post<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T> {
+    return this.request({ method: 'POST', url, data, ...config });
   }
 
   public put<T = any>(url: string, data?: any): Promise<T> {
