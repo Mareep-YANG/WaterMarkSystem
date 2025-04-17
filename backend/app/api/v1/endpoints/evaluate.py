@@ -107,18 +107,17 @@ async def evaluate_watermark(
 
 @router.post("/attackers")
 async def list_attackers() -> Any:
-	"""
-	获取所有支持的攻击算法
-	"""
-	attackers_results = []
-	for name, attacker_class in ATTACKERS.items():
-		attackers_results.append(
-			{
-				"name": name,
-				"description": attacker_class.__doc__ or "No description available",
-				"params": {
-					# 这里可以添加攻击器支持的参数说明
-				}
-			}
-		)
-	return attackers_results
+    """
+    获取所有支持的攻击算法
+    """
+    attackers_results = []
+    for name, attacker_class in ATTACKERS.items():
+        attacker = attacker_class()
+        attackers_results.append(
+            {
+                "name": name,
+                "description": attacker.__doc__ or "No description available",
+                "params":  attacker.to_config()
+            }
+        )
+    return attackers_results
