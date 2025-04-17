@@ -1,4 +1,7 @@
 import { createRouter, createWebHistory, RouteRecordRaw } from 'vue-router'; // 引入Vue Router的相关函数和类型
+import { useUserStore } from '@/stores'; // 引入 Pinia 的用户状态
+import { ElMessage } from 'element-plus'; // 引入 Element Plus 的消息组件
+
 const routes: RouteRecordRaw[] = [
   {
     path: '/',
@@ -63,27 +66,27 @@ const router = createRouter({
 
 // 路由守卫
 router.beforeEach((to, _from, next) => {
-  const token = localStorage.getItem('token'); // 从本地存储获取token
-  
+  const userStore = useUserStore();
+
   if (to.matched.some(record => record.meta.requiresAuth)) {
-    // 需要认证的页面
-    if (!token) {
+    if (!userStore.token) {
+      ElMessage.warning('请先登录以访问该页面');
       next({
         path: '/login',
-        query: { redirect: to.fullPath } // 重定向到登录页面，并传递重定向地址
+        query: { redirect: to.fullPath },
       });
     } else {
-      next(); // 已认证，继续导航
+      next();
     }
   } else if (to.matched.some(record => record.meta.guest)) {
-    // 游客页面
-    if (token) {
-      next('/'); // 已登录，重定向到首页
+    if (userStore.token) {
+      ElMessage.info('您已登录，正在跳转到首页');
+      next('/');
     } else {
-      next(); // 未登录，继续导航
+      next();
     }
   } else {
-    next(); // 无需认证，继续导航
+    next();
   }
 });
 

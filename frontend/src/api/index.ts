@@ -15,8 +15,8 @@ interface Dataset {
   description: string | null; // 数据集的描述
   createdAt: string; // 数据集的创建时间
   updatedAt: string; // 数据集的最后更新时间
-  source: 'uploaded' | 'huggingfacehub'; // 数据集的来源
-  numRows: number; // 数据集中的行数
+  source: 'uploaded' | 'huggingface_hub'; // 数据集的来源
+  num_rows: number; // 数据集中的行数
   storagePath: string; // 数据集的存储路径
   status: 'processing' | 'completed' | 'failed'| 'pending'; // 数据集的状态
 }
@@ -29,7 +29,12 @@ export const auth = {
 
   // 用户登录
   login: (data: { username: string; password: string }) =>
-    request.login(data.username, data.password),
+    request.login(data.username, data.password).then((response) => {
+      return {
+        token: response.access_token,
+        tokenType: response.token_type,
+      };
+    }),
 
   // 创建API密钥
   createApiKey: (description: string) =>
@@ -43,7 +48,16 @@ export const auth = {
     request.delete(`/auth/api-keys/${id}`),
 
   // 获取用户信息
-  getProfile: () => request.get('/auth/info'),
+  getProfile: async () => {
+    try {
+      return await request.get('/auth/info');
+    } catch (error: any) {
+      if (error.response?.status === 401) {
+        throw new Error('Token无效或已过期');
+      }
+      throw error;
+    }
+  },
 };
 
 // 水印相关接口

@@ -16,7 +16,7 @@
           <el-input
             v-model="formData.username"
             placeholder="请输入用户名"
-            :prefix-icon="User"
+            prefix-icon="User"
           />
         </el-form-item>
         
@@ -25,7 +25,7 @@
             v-model="formData.password"
             type="password"
             placeholder="请输入密码"
-            :prefix-icon="Lock"
+            prefix-icon="Lock"
             show-password
           />
         </el-form-item>
@@ -55,7 +55,6 @@
 import { ref, reactive } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { ElMessage } from 'element-plus';
-import { User, Lock } from '@element-plus/icons-vue';
 import type { FormInstance } from 'element-plus';
 import { useUserStore } from '@/stores';
 
@@ -92,11 +91,26 @@ const handleSubmit = async () => {
     await userStore.login(formData.username, formData.password);
 
     ElMessage.success('登录成功');
-    
+
+    try {
+      await userStore.fetchProfile();
+    } catch (error: any) {
+      if (error.response?.status === 401) {
+        ElMessage.error('会话已过期，请重新登录');
+        userStore.logout();
+        return router.push('/login');
+      }
+      throw error;
+    }
+
     const redirect = route.query.redirect as string;
     await router.push(redirect || '/');
   } catch (error: any) {
-    ElMessage.error(error.message || '登录失败');
+    if (!error.response) {
+      ElMessage.error('网络错误，请检查您的网络连接');
+    } else {
+      ElMessage.error(error.response?.data?.message || '登录失败');
+    }
   } finally {
     loading.value = false;
   }

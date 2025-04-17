@@ -1,5 +1,7 @@
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
 import { ElMessage } from 'element-plus';
+import { useUserStore } from '@/stores';
+import router from '@/router'; 
 
 const baseURL = 'http://192.168.1.141:8000/api/v1';
 
@@ -22,35 +24,38 @@ class Request {
     // 请求拦截器
     this.instance.interceptors.request.use(
       (config) => {
-        const token = localStorage.getItem('token');
-        if (token) {
-          config.headers.Authorization = `Bearer ${token}`;
-        }
-        return config;
-      },
+        const userStore = useUserStore();
+      if (userStore.token) { 
+        config.headers.Authorization = `Bearer ${userStore.token}`;
+      }
+      return config;
+    },
       (error) => {
         return Promise.reject(error);
       }
     );
 
     // 响应拦截器
-    this.instance.interceptors.response.use(
-      (response: AxiosResponse) => {
-        return response.data;
-      },
-      (error) => {
-        const { response } = error;
-        if (response?.status === 401) {
-          // 清除token并跳转到登录页
-          localStorage.removeItem('token');
-          window.location.href = '/login';
-        }
-        
-        ElMessage.error(response?.data?.detail || '请求失败');
-        return Promise.reject(error);
+  this.instance.interceptors.response.use(
+    (response: AxiosResponse) => {
+      return response.data;
+    },
+    (error) => {
+      const { response} = error;
+      const userStore = useUserStore();
+
+      if (response?.status === 401) {
+        userStore.logout();
+        router.push({
+          path: '/login',
+          query: { redirect: router.currentRoute.value.fullPath },
+        });
+        ElMessage.error('会话已过期，请重新登录');
       }
-    );
-  }
+      return Promise.reject(error);
+    }
+  );
+}
 
   public async request<T = any>(config: AxiosRequestConfig): Promise<T> {
     try {
@@ -77,7 +82,6 @@ class Request {
     return this.request({ method: 'DELETE', url });
   }
   public login<T = any>(username: string, password: string): Promise<T> {
-    // 使用URLSearchParams创建application/x-www-form-urlencoded格式的数据
     const formData = new URLSearchParams();
     formData.append('username', username);
     formData.append('password', password);
