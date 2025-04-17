@@ -69,7 +69,7 @@ class DIPWatermark(LogitsWatermark):
         self.z_threshold = z_threshold
         self.prefix_length = prefix_length
         self.cc_history = set()
-        self.state_indicator = 1  # 0 for generation, 1 for detection
+        self.state_indicator = 1  # 0  for generation, 1 for detection
         self.key = key
         llm_service.clear_processors()
         llm_service.add_processor(DipProcessor(self))
