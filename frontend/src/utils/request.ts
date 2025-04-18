@@ -3,7 +3,7 @@ import { ElMessage } from 'element-plus';
 import { useUserStore } from '@/stores';
 import router from '@/router'; 
 
-const baseURL = 'http://127.0.0.1:8000/api/v1';
+const baseURL = '/api/v1';
 
 class Request {
   private instance: AxiosInstance;
@@ -11,10 +11,11 @@ class Request {
   constructor() {
     this.instance = axios.create({
       baseURL,
-      timeout: 100000000,
+      timeout: 30000, // 30秒超时
       headers: {
         'Content-Type': 'application/json',
       },
+      withCredentials: true, // 允许跨域携带凭证
     });
 
     this.setupInterceptors();
@@ -25,37 +26,48 @@ class Request {
     this.instance.interceptors.request.use(
       (config) => {
         const userStore = useUserStore();
-      if (userStore.token) { 
-        config.headers.Authorization = `Bearer ${userStore.token}`;
-      }
-      return config;
-    },
+        if (userStore.token) { 
+          config.headers.Authorization = `Bearer ${userStore.token}`;
+        }
+        // 添加时间戳防止缓存
+        if (config.method === 'get') {
+          config.params = {
+            ...config.params,
+            _t: new Date().getTime()
+          };
+        }
+        return config;
+      },
       (error) => {
         return Promise.reject(error);
       }
     );
 
     // 响应拦截器
-  this.instance.interceptors.response.use(
-    (response: AxiosResponse) => {
-      return response.data;
-    },
-    (error) => {
-      const { response} = error;
-      const userStore = useUserStore();
+    this.instance.interceptors.response.use(
+      (response: AxiosResponse) => {
+        return response.data;
+      },
+      (error) => {
+        const { response } = error;
+        const userStore = useUserStore();
 
-      if (response?.status === 401) {
-        userStore.logout();
-        router.push({
-          path: '/login',
-          query: { redirect: router.currentRoute.value.fullPath },
-        });
-        ElMessage.error('会话已过期，请重新登录');
+        if (response?.status === 401) {
+          userStore.logout();
+          router.push({
+            path: '/login',
+            query: { redirect: router.currentRoute.value.fullPath },
+          });
+          ElMessage.error('会话已过期，请重新登录');
+        } else if (response?.status === 504) {
+          ElMessage.error('请求超时，请稍后重试');
+        } else if (!response) {
+          ElMessage.error('网络错误，请检查网络连接');
+        }
+        return Promise.reject(error);
       }
-      return Promise.reject(error);
-    }
-  );
-}
+    );
+  }
 
   public async request<T = any>(config: AxiosRequestConfig): Promise<T> {
     try {

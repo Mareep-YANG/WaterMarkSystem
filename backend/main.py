@@ -23,15 +23,16 @@ app = FastAPI(
 	lifespan=lifespan
 )
 
-if cfg.CORS_ORIGINS:
-	app.add_middleware(
-		CORSMiddleware,
-		#	allow_origins=[str(origin) for origin in cfg.CORS_ORIGINS],
-		allow_origins=["*"],  # TODO:生产环境下改为前端地址
-		allow_credentials=True,
-		allow_methods=["*"],
-		allow_headers=["*"]
-	)
+# CORS配置
+app.add_middleware(
+	CORSMiddleware,
+	allow_origins=["http://localhost:3000"],
+	allow_credentials=True,
+	allow_methods=["*"],
+	allow_headers=["*"],
+	expose_headers=["*"],
+	max_age=3600  # 预检请求缓存时间
+)
 
 app.include_router(
 	api_router,
@@ -47,11 +48,32 @@ init_db(app)
 
 if __name__ == "__main__":
 	import uvicorn
+	import logging
 	
-	uvicorn.run(
-		'main:app',
-		host="0.0.0.0",
-		port=8000,
-		reload=True,
-		use_colors=True
+	# 配置日志
+	logging.basicConfig(
+		level=logging.INFO,
+		format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 	)
+	logger = logging.getLogger("uvicorn")
+	
+	try:
+		uvicorn.run(
+			'main:app',
+			host="127.0.0.1",
+			port=8000,
+			reload=True,
+			use_colors=True,
+			workers=1,
+			loop="auto",
+			http="auto",
+			proxy_headers=True,
+			server_header=True,
+			date_header=True,
+			log_level="info",
+			access_log=True,
+			timeout_keep_alive=30
+		)
+	except Exception as e:
+		logger.error(f"服务器启动失败: {str(e)}")
+		raise

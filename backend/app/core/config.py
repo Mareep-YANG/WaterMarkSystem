@@ -16,7 +16,7 @@ class Settings(BaseSettings):
 	API_V1: str = "/api/v1"
 	DEBUG: bool = False
 	# 安全设置
-	CORS_ORIGINS: List[AnyHttpUrl] = ["http://localhost:3000"]
+	CORS_ORIGINS: List[AnyHttpUrl] = ["http://localhost:3000", "http://127.0.0.1:3000"]
 	JWT_SECRET_KEY: str
 	ALGORITHM: str = "HS256"
 	ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
