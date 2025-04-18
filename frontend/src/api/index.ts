@@ -79,7 +79,6 @@ export const watermark = {
   embed: (data: {
     text: string;
     algorithm: string;
-    key: string;
     params?: Record<string, any>;
   }) => request.post<TaskResponse>('/watermark/embed', data),
 
@@ -87,7 +86,6 @@ export const watermark = {
   detect: (data: {
     text: string;
     algorithm: string;
-    key: string;
     params?: Record<string, any>;
   }) => request.post<TaskResponse>('/watermark/detect', data),
 
@@ -95,7 +93,6 @@ export const watermark = {
   visualize: (data: {
     text: string;
     algorithm: string;
-    key: string;
     params?: Record<string, any>;
   }) => request.post('/watermark/visualize', data),
 

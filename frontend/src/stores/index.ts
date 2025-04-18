@@ -127,14 +127,13 @@ export const useWatermarkStore = defineStore('watermark', {
       this.currentAlgorithm = algorithm;
     },
     
-    async embedWatermark(text: string, key: string, params?: Record<string, any>) {
+    async embedWatermark(text: string, params?: Record<string, any>) {
       if (!this.currentAlgorithm) {
         throw new Error('No algorithm selected');
       }
       const response = await api.watermark.embed({
         text,
         algorithm: this.currentAlgorithm,
-        key,
         params,
       });
 
@@ -145,14 +144,13 @@ export const useWatermarkStore = defineStore('watermark', {
       return response.task_id;
     },
     
-    async detectWatermark(text: string, key: string, params?: Record<string, any>) {
+    async detectWatermark(text: string, params?: Record<string, any>) {
       if (!this.currentAlgorithm) {
         throw new Error('No algorithm selected');
       }
       const response = await api.watermark.detect({
         text,
         algorithm: this.currentAlgorithm,
-        key,
         params,
       });
 
