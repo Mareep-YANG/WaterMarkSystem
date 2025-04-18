@@ -19,7 +19,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
 	title=cfg.APP_NAME,
 	version=cfg.VERSION,
-	openapi_url=f"{cfg.API_V1}/openapi.json",
+	openapi_url=f"{cfg.API_ENDPOINT}/openapi.json",
 	lifespan=lifespan
 )
 
@@ -36,12 +36,12 @@ app.add_middleware(
 
 app.include_router(
 	api_router,
-	prefix=cfg.API_V1
+	prefix=cfg.API_ENDPOINT
 )
 
 app.include_router(
 	tasks.router,
-	prefix=cfg.API_V1
+	prefix=cfg.API_ENDPOINT
 )
 
 init_db(app)

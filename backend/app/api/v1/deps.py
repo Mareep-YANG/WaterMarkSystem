@@ -19,7 +19,7 @@ from app.core import cfg, TORTOISE_ORM
 from app.dbModels.user import APIKey, User
 
 oauth2_scheme = OAuth2PasswordBearer(
-	tokenUrl=f"{cfg.API_V1}/auth/login"
+	tokenUrl=f"{cfg.API_ENDPOINT}/auth/login"
 )
 api_key_header = APIKeyHeader(
 	name="X-API-Key",

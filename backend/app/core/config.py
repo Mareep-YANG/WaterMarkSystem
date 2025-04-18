@@ -13,8 +13,7 @@ class Settings(BaseSettings):
 	ENVIRONMENT: str = "development"
 	APP_NAME: str = "Watermark System"
 	VERSION: str = "1.0.0"
-	API_V1: str = "/api/v1"
-	DEBUG: bool = False
+	API_ENDPOINT: str = "/api/v1"
 	# 安全设置
 	CORS_ORIGINS: List[AnyHttpUrl] = ["http://localhost:3000", "http://127.0.0.1:3000"]
 	JWT_SECRET_KEY: str
@@ -29,7 +28,7 @@ class Settings(BaseSettings):
 	SQL_DBNAME: str
 	
 	# 模型配置
-	MODEL_PATH: str = "facebook/opt-1.3b"
+	DEFAULT_MODEL: str = "facebook/opt-1.3b"
 	MODEL_CACHE_DIR: str = ".cache/models"
 	
 	class Config:

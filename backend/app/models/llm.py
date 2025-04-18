@@ -58,7 +58,7 @@ class LLMService:
 	
 	async def load_model(self, model_name: Optional[str] = None):
 		"""加载模型"""
-		model_name = model_name or cfg.MODEL_PATH
+		model_name = model_name or cfg.DEFAULT_MODEL
 		self.model = AutoModelForCausalLM.from_pretrained(
 			model_name,
 			cache_dir=cfg.MODEL_CACHE_DIR,
