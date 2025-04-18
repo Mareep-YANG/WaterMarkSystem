@@ -7,31 +7,46 @@ const routes: RouteRecordRaw[] = [
     path: '/',
     name: 'Home',
     component: () => import('@/views/Home.vue'), // 懒加载Home组件
-    meta: { requiresAuth: true } // 需要认证的页面
+    meta: { 
+      requiresAuth: true,
+      showNav: true
+    } // 需要认证的页面
   },
   {
     path: '/register',
     name: 'Register',
     component: () => import('@/views/Register.vue'), // 懒加载Register组件
-    meta: { guest: true } // 游客页面
+    meta: { 
+      guest: true,
+      showNav: false
+    } // 游客页面
   },
   {
     path: '/login',
     name: 'Login',
     component: () => import('@/views/Login.vue'), // 懒加载Login组件
-    meta: { guest: true } // 游客页面
+    meta: { 
+      guest: true,
+      showNav: false
+    } // 游客页面
   },
   {
     path: '/watermark',
     name: 'Watermark',
     component: () => import('@/views/Watermark.vue'), // 懒加载Watermark组件
-    meta: { requiresAuth: true } // 需要认证的页面
+    meta: { 
+      requiresAuth: true,
+      showNav: true
+    } // 需要认证的页面
   },
   {
     path: '/evaluate',
     name: 'Evaluate',
     component: () => import('@/views/Evaluate.vue'), // 懒加载Evaluate组件
-    meta: { requiresAuth: true } // 需要认证的页面
+    meta: { 
+      requiresAuth: true,
+      showNav: true
+    } // 需要认证的页面
   },
   {
     path: '/models',
@@ -39,14 +54,18 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/views/ModelManagement.vue'), // 懒加载model组件
     meta: {
       title: 'Model Management',
-       requiresAuth: true 
+      requiresAuth: true,
+      showNav: true
     } // 需要认证的页面
   },
   {
     path: '/profile',
     name: 'Profile',
     component: () => import('@/views/Profile.vue'), // 懒加载Profile组件
-    meta: { requiresAuth: true } // 需要认证的页面
+    meta: { 
+      requiresAuth: true,
+      showNav: true
+    } // 需要认证的页面
   },
   {
     path: '/dataset',
@@ -54,9 +73,10 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/views/Dataset.vue'), // 懒加载model组件
     meta: {
       title: 'Dataset',
-       requiresAuth: true 
+      requiresAuth: true,
+      showNav: true
     } // 需要认证的页面
-  },
+  }
 ];
 
 const router = createRouter({
