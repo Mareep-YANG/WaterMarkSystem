@@ -43,25 +43,21 @@
               />
             </el-form-item>
 
-            <el-form-item label="参数设置" v-if="currentAlgorithmParams"><!-- 参数设置区域 -->
-              <el-collapse>
-                <el-collapse-item title="高级参数">
-                  <template v-for="(value, key) in currentAlgorithmParams" :key="key">
-                    <el-form-item :label="key">
-                      <el-input-number
-                        v-if="typeof value === 'number'"
-                        v-model="formData.params[key]"
-                        :min="0"
-                        :step="0.1"
-                      />
-                      <el-input
-                        v-else
-                        v-model="formData.params[key]"
-                      />
-                    </el-form-item>
-                  </template>
-                </el-collapse-item>
-              </el-collapse>
+            <el-form-item label="参数设置" v-if="currentAlgorithmParams">
+              <template v-for="(value, key) in currentAlgorithmParams" :key="key">
+                <el-form-item :label="key">
+                  <el-input-number
+                    v-if="typeof value === 'number'"
+                    v-model="formData.params[key]"
+                    :min="0"
+                    :step="0.1"
+                  />
+                  <el-input
+                    v-else
+                    v-model="formData.params[key]"
+                  />
+                </el-form-item>
+              </template>
             </el-form-item>
 
             <div class="button-group"><!-- 按钮组 -->

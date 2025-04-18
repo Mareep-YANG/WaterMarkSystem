@@ -8,7 +8,10 @@ from pydantic import BaseModel
 
 from app.core import tasks
 from app.dbModels import Dataset
-from app.evaluation.attacker import ATTACKERS
+from app.evaluation.attacker import ATTACKERS, get_attacker
+from app.evaluation.detectability import evaluation_detectability
+from app.evaluation.quality import evaluation_quality
+from app.evaluation.robustness import evaluation_robustness
 from app.watermarks import get_watermark_algorithm
 
 router = APIRouter()
@@ -50,9 +53,42 @@ async def process_evaluate_watermark_task(task_id: str):
 			request_data["algorithm"],
 			**request_data["watermark_params"]
 		)
-		
-		# 执行指标计算...
-		# (保留原有评估逻辑，此处省略具体实现)
+		# 获取水印算法实例
+		# 计算每个请求的指标
+		for metric_name in request_data["metrics"]:
+			if metric_name == "robustness":
+				# 鲁棒性评估
+				metrics_results.append(
+					{"type": "robustness",
+					 "content": evaluation_robustness(
+						 watermark=watermark,
+						 dataset=dataset,
+						 attacker=get_attacker(request_data["params"]["attack_name"], **request_data["attack_params"]),
+					 )
+					 }
+				)
+			elif metric_name == "quality":
+				# 文本质量评估
+				metrics_results.append(
+					{"type": "quality",
+					 "content": evaluation_quality(
+						 watermark=watermark,
+						 dataset=dataset,
+						 metrics=request_data["params"]["quality_metrics"]
+					 )
+					 }
+				)
+
+			elif metric_name == "detectability":
+				# 可检测性评估
+				metrics_results.append(
+					{"type": "detectability",
+					 "content": evaluation_detectability(
+						 watermark=watermark,
+						 dataset=dataset,
+					 )
+					 }
+				)
 		
 		with tasks.task_lock:
 			tasks.tasks[task_id].update(

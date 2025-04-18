@@ -107,13 +107,16 @@ export const watermark = {
 export const evaluate = {
   // 评估指标
   metrics: (data: {
-    original_text: string;
-    watermarked_text: string;
     algorithm: string;
-    key: string;
     metrics: string[];
+    watermark_params?: Record<string, any>;
     params?: Record<string, any>;
+    attack_params?: Record<string, any>;
+    dataset_id: string;
   }) => request.post<TaskResponse>('/evaluate/metrics', data),
+
+  // 获取攻击算法列表
+  getAttackers: () => request.post('/evaluate/attackers'),
 
   // 攻击测试
   attack: (data: {
@@ -123,6 +126,9 @@ export const evaluate = {
     attack_type: string;
     attack_params?: Record<string, any>;
   }) => request.post('/evaluate/attack', data),
+
+  // 获取任务状态
+  getTaskStatus: (taskId: string) => request.get<TaskResponse>(`/tasks/${taskId}`),
 };
 
 // 模型管理相关接口

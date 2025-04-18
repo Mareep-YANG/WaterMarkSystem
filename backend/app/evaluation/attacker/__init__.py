@@ -24,7 +24,7 @@ def get_attacker(name: str, **kwargs) -> TextWatermarkAttacker:
 	"""
 	if name not in ATTACKERS:
 		raise ValueError(f"Unknown attacker: {name}")
-	return ATTACKERS[name](config=kwargs)
+	return ATTACKERS[name](**kwargs)
 
 
 __all__ = [
