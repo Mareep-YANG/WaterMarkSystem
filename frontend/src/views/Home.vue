@@ -14,11 +14,16 @@
         </el-card>
       </el-col>
     </el-row>
+    <el-row :gutter="20">
+      <el-col :span="24">
+        <SystemOverview />
+      </el-col>
+    </el-row>
   </div>
 </template>
 
 <script setup lang="ts">
-// 不再需要路由相关的代码
+import SystemOverview from '@/components/SystemOverview.vue'
 </script>
 
 <style scoped>
@@ -28,6 +33,8 @@
 
 .welcome-card {
   margin-bottom: 20px; /* 设置卡片底部外边距 */
+  background-color: var(--el-bg-color);
+  border: 1px solid var(--el-border-color);
 }
 
 .welcome-header {
@@ -35,8 +42,14 @@
   align-items: center; /* 设置头部内容的对齐方式 */
 }
 
+.welcome-header h2 {
+  color: var(--el-text-color-primary);
+  margin: 0;
+}
+
 .welcome-content {
   font-size: 16px; /* 设置内容字体大小 */
   line-height: 1.6; /* 设置内容行高 */
+  color: var(--el-text-color-regular);
 }
 </style>

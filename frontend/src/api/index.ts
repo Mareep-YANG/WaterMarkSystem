@@ -205,10 +205,27 @@ export const createDatasetFormData = (
   return formData;
 };
 
+// 系统信息接口定义
+export interface SystemInfo {
+  system_type: string;
+  torch_device: string;
+  cpu_usage: number;
+  memory_usage: number;
+  gpu_usage: number;
+  gpu_memory_usage: number;
+}
+
+// 系统相关接口
+export const system = {
+  // 获取系统概览信息
+  getOverview: () => request.get<SystemInfo>('/system/system/overview'),
+};
+
 export default {
   auth,
   watermark,
   evaluate,
   models,
   datasets,
+  system,
 };
