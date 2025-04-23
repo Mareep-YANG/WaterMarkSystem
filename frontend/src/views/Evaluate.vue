@@ -166,141 +166,90 @@
 
         <el-card v-if="result.metrics"><!-- 评估结果卡片 -->
           <template #header>
-            <h3>评估结果</h3><!-- 评估结果标题 -->
+            <h3>评估结果</h3>
           </template>
 
-          <div class="metrics-results"><!-- 评估结果内容区域 -->
+          <div class="metrics-results">
             <!-- 文本质量指标 -->
-            <template v-if="result.metrics?.quality">
-              <el-row>
-                <el-col :span="24">
-                  <h4>文本质量指标</h4>
-                </el-col>
+            <div v-if="result.metrics.find(m => m.type === 'quality')" class="metric-section">
+              <h4>文本质量指标</h4>
+              <el-row v-for="(value, key) in result.metrics.find(m => m.type === 'quality')?.content" :key="key">
+                <el-col :span="12" class="metric-label">{{ getMetricLabel(key) }}：</el-col>
+                <el-col :span="12" class="metric-value">{{ formatMetricValue(value) }}</el-col>
               </el-row>
-              <el-row v-if="result.metrics.quality.PPL !== undefined">
-                <el-col :span="12">困惑度 (PPL)：</el-col>
-                <el-col :span="12">{{ result.metrics.quality.PPL?.toFixed(2) }}</el-col>
-              </el-row>
-              <el-row v-if="result.metrics.quality['Log Diversity'] !== undefined">
-                <el-col :span="12">对数多样性：</el-col>
-                <el-col :span="12">{{ result.metrics.quality['Log Diversity']?.toFixed(2) }}</el-col>
-              </el-row>
-              <el-row v-if="result.metrics.quality.BLEU !== undefined">
-                <el-col :span="12">BLEU分数：</el-col>
-                <el-col :span="12">{{ result.metrics.quality.BLEU?.toFixed(2) }}</el-col>
-              </el-row>
-            </template>
+            </div>
 
             <!-- 鲁棒性指标 -->
-            <template v-if="result.metrics?.robustness">
+            <div v-if="result.metrics.find(m => m.type === 'robustness')" class="metric-section">
+              <h4>鲁棒性指标</h4>
               <el-row>
-                <el-col :span="24">
-                  <h4>鲁棒性指标</h4>
-                </el-col>
-              </el-row>
-              <el-row>
-                <el-col :span="12">攻击前水印检测率：</el-col>
+                <el-col :span="12" class="metric-label">攻击前水印检测率：</el-col>
                 <el-col :span="12">
                   <el-progress
-                    :percentage="result.metrics.robustness.watermark_detection_rate_before_attack * 100"
+                    :percentage="result.metrics.find(m => m.type === 'robustness')?.content.watermark_detection_rate_before_attack * 100"
                     :format="format"
                   />
                 </el-col>
               </el-row>
               <el-row>
-                <el-col :span="12">攻击后水印检测率：</el-col>
+                <el-col :span="12" class="metric-label">攻击后水印检测率：</el-col>
                 <el-col :span="12">
                   <el-progress
-                    :percentage="result.metrics.robustness.watermark_detection_rate_after_attack * 100"
+                    :percentage="result.metrics.find(m => m.type === 'robustness')?.content.watermark_detection_rate_after_attack * 100"
                     :format="format"
                   />
                 </el-col>
               </el-row>
               <el-row>
-                <el-col :span="12">攻击成功率：</el-col>
+                <el-col :span="12" class="metric-label">攻击成功率：</el-col>
                 <el-col :span="12">
                   <el-progress
-                    :percentage="result.metrics.robustness.attack_success_rate * 100"
+                    :percentage="result.metrics.find(m => m.type === 'robustness')?.content.attack_success_rate * 100"
                     :format="format"
                   />
                 </el-col>
               </el-row>
-            </template>
+            </div>
 
             <!-- 可检测性指标 -->
-            <template v-if="result.metrics?.detectability">
+            <div v-if="result.metrics.find(m => m.type === 'detectability')" class="metric-section">
+              <h4>可检测性指标</h4>
               <el-row>
-                <el-col :span="24">
-                  <h4>可检测性指标</h4>
-                </el-col>
-              </el-row>
-              <el-row>
-                <el-col :span="12">准确率：</el-col>
+                <el-col :span="12" class="metric-label">准确率：</el-col>
                 <el-col :span="12">
                   <el-progress
-                    :percentage="result.metrics.detectability.accuracy * 100"
+                    :percentage="result.metrics.find(m => m.type === 'detectability')?.content.accuracy * 100"
                     :format="format"
                   />
                 </el-col>
               </el-row>
               <el-row>
-                <el-col :span="12">精确率：</el-col>
+                <el-col :span="12" class="metric-label">精确率：</el-col>
                 <el-col :span="12">
                   <el-progress
-                    :percentage="result.metrics.detectability.precision * 100"
+                    :percentage="result.metrics.find(m => m.type === 'detectability')?.content.precision * 100"
                     :format="format"
                   />
                 </el-col>
               </el-row>
               <el-row>
-                <el-col :span="12">召回率：</el-col>
+                <el-col :span="12" class="metric-label">召回率：</el-col>
                 <el-col :span="12">
                   <el-progress
-                    :percentage="result.metrics.detectability.recall * 100"
+                    :percentage="result.metrics.find(m => m.type === 'detectability')?.content.recall * 100"
                     :format="format"
                   />
                 </el-col>
               </el-row>
               <el-row>
-                <el-col :span="12">F1分数：</el-col>
+                <el-col :span="12" class="metric-label">F1分数：</el-col>
                 <el-col :span="12">
                   <el-progress
-                    :percentage="result.metrics.detectability.f1_score * 100"
+                    :percentage="result.metrics.find(m => m.type === 'detectability')?.content.f1_score * 100"
                     :format="format"
                   />
                 </el-col>
               </el-row>
-              <el-row>
-                <el-col :span="12">误报率：</el-col>
-                <el-col :span="12">
-                  <el-progress
-                    :percentage="result.metrics.detectability.false_positive_rate * 100"
-                    :format="format"
-                  />
-                </el-col>
-              </el-row>
-              <el-row>
-                <el-col :span="12">漏报率：</el-col>
-                <el-col :span="12">
-                  <el-progress
-                    :percentage="result.metrics.detectability.false_negative_rate * 100"
-                    :format="format"
-                  />
-                </el-col>
-              </el-row>
-            </template>
-
-            <div v-if="result.details" class="metrics-details mt-20"><!-- 详细信息区域 -->
-              <h4>详细信息</h4>
-              <el-descriptions border>
-                <el-descriptions-item
-                  v-for="(value, key) in result.details"
-                  :key="key"
-                  :label="key"
-                >
-                  {{ JSON.stringify(value) }}
-                </el-descriptions-item>
-              </el-descriptions>
             </div>
           </div>
         </el-card>
@@ -356,27 +305,13 @@ import { useTaskStore } from '@/stores/task';
 import { ElMessage } from 'element-plus'; // 引入Element Plus的消息组件
 import api from '@/api'; // 引入API模块
 
+interface MetricItem {
+  type: string;
+  content: Record<string, any>;
+}
+
 interface ResultState {
-  metrics: {
-    quality?: {
-      PPL?: number;
-      'Log Diversity'?: number;
-      BLEU?: number;
-    };
-    robustness?: {
-      watermark_detection_rate_before_attack: number;
-      watermark_detection_rate_after_attack: number;
-      attack_success_rate: number;
-    };
-    detectability?: {
-      accuracy: number;
-      precision: number;
-      recall: number;
-      f1_score: number;
-      false_positive_rate: number;
-      false_negative_rate: number;
-    };
-  } | null;
+  metrics: MetricItem[] | null;
   details: Record<string, any> | null;
   attack: {
     success_rate: number;
@@ -445,9 +380,9 @@ const loading = reactive({
 });
 
 const result = reactive<ResultState>({
-  metrics: null, // 评估结果
-  details: null, // 详细信息
-  attack: null, // 攻击结果
+  metrics: null,
+  details: null,
+  attack: null,
 });
 
 const attackers = reactive<Attacker[]>([]);
@@ -461,6 +396,11 @@ watch(() => formData.algorithm, () => {
 watch(() => attackData.type, () => {
   attackData.params = { ...currentAttackerParams.value };
 });
+
+// 添加监听器
+watch(() => result.metrics, (newValue) => {
+  console.log('metrics changed:', newValue);
+}, { deep: true });
 
 const handleEvaluate = async () => {
   if (!formData.dataset_id || !formData.algorithm) {
@@ -505,8 +445,13 @@ const handleEvaluate = async () => {
       (taskResponse) => {
         if (taskResponse.status === 'completed') {
           taskStatus.value = 'completed';
-          result.metrics = taskResponse.result.metrics;
-          result.details = taskResponse.result.details;
+          console.log('评估结果:', taskResponse.result);
+          // 使用Object.assign确保响应式更新
+          Object.assign(result, {
+            metrics: taskResponse.result?.metrics || null,
+            details: taskResponse.result?.details || null,
+            attack: taskResponse.result?.attack || null
+          });
           currentTaskId.value = '';
           ElMessage.success('评估完成');
         } else if (taskResponse.status === 'failed') {
@@ -554,6 +499,23 @@ onMounted(async () => {
     ElMessage.error('获取算法列表失败');
   }
 });
+
+// 添加工具函数
+const getMetricLabel = (key: string): string => {
+  const labels: Record<string, string> = {
+    'PPL': '困惑度',
+    'Log Diversity': '对数多样性',
+    'BLEU': 'BLEU分数'
+  };
+  return labels[key] || key;
+};
+
+const formatMetricValue = (value: any): string => {
+  if (typeof value === 'number') {
+    return value.toFixed(2);
+  }
+  return value;
+};
 </script>
 
 <style scoped>
@@ -594,5 +556,51 @@ onMounted(async () => {
 
 .task-error {
   margin-top: 20px;
+}
+
+/* 添加调试信息样式 */
+.debug-info {
+  background-color: #f5f7fa;
+  padding: 10px;
+  margin-bottom: 20px;
+  border-radius: 4px;
+  border: 1px solid #e4e7ed;
+}
+
+.debug-info pre {
+  margin: 0;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+.metric-section {
+  margin-bottom: 30px;
+  padding: 15px;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+}
+
+.metric-section h4 {
+  margin-bottom: 15px;
+  color: #409EFF;
+  font-weight: 600;
+}
+
+.metric-label {
+  font-weight: 500;
+  color: #606266;
+}
+
+.metric-value {
+  color: #303133;
+  font-weight: 600;
+}
+
+.el-progress {
+  margin: 5px 0;
+}
+
+.el-row {
+  margin-bottom: 10px;
 }
 </style>
