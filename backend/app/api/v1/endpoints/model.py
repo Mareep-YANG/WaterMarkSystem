@@ -12,6 +12,29 @@ from app.core import tasks
 router = APIRouter()
 
 
+async def init_models():
+	"""初始化模型状态"""
+	# 重置所有模型的is_loaded状态为False
+	await HuggingfaceModel.all().update(is_loaded=False)
+	
+	# 重置LLMService的状态
+	if llm_service.model is not None:
+		# 确保模型从GPU内存中释放
+		if llm_service.device == "cuda":
+			try:
+				# 先将模型移至CPU
+				llm_service.model = llm_service.model.to("cpu")
+				# 清空CUDA缓存
+				import torch
+				torch.cuda.empty_cache()
+			except Exception as e:
+				print(f"初始化时清空GPU内存时出错: {str(e)}")
+	
+	llm_service.model = None
+	llm_service.tokenizer = None
+	llm_service.is_active = False
+
+
 class HuggingfaceModelCreate(BaseModel):
 	model_name: str = Field(..., description="模型名称")
 	description: Optional[str] = Field(None, description="模型描述")
@@ -115,11 +138,14 @@ async def process_load_model_task(task_id: str):
 		if not model:
 			raise Exception("目标模型已被删除")
 		
+		# 先将所有模型的is_loaded状态设置为False
+		await HuggingfaceModel.all().update(is_loaded=False)
+		
 		# 执行实际加载逻辑
 		await llm_service.load_model(model.model_name)
 		
-		# 更新数据库状态
-		model.is_loaded = True
+		# 更新当前模型数据库状态
+		model.is_loaded = llm_service.is_active  # 使用LLMService的is_active状态
 		await model.save()
 		
 		# 更新任务状态
@@ -156,9 +182,15 @@ async def process_generate_text_task(task_id: str):
 		model = await HuggingfaceModel.get(id=request_data["model_id"])
 		
 		# 模型加载检查
-		if not model.is_loaded:
+		if not model.is_loaded or not llm_service.is_active:  # 同时检查数据库状态和LLMService状态
+			# 先将所有模型的is_loaded状态设置为False
+			await HuggingfaceModel.all().update(is_loaded=False)
+			
+			# 加载当前模型
 			await llm_service.load_model(model.model_name)
-			model.is_loaded = True
+			
+			# 更新当前模型数据库状态
+			model.is_loaded = llm_service.is_active  # 使用LLMService的is_active状态
 			await model.save()
 		
 		# 执行生成逻辑

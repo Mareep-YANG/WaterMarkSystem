@@ -5,11 +5,14 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.v1 import api_router, init_db
 from app.core import cfg, tasks
+from app.api.v1.endpoints.model import init_models
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
 	print('\033[7;37m启动！\033[0m')
+	# 初始化模型状态
+	await init_models()
 	
 	yield
 	
