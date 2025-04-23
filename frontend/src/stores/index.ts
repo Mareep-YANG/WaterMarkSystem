@@ -22,11 +22,12 @@ interface Dataset {
 
 interface UserState {
   token: string | null;
-  tokenType: string | null; // 添加 tokenType 属性
+  tokenType: string | null;
   profile: {
     username: string;
     email: string;
     is_active: boolean;
+    avatar: string | null;
   } | null;
 }
 
@@ -53,12 +54,12 @@ export const useUserStore = defineStore('user', {
   },
   
   actions: {
-    setToken(token: string,  tokenType: string) {
+    setToken(token: string, tokenType: string) {
       this.token = token;
-      this.tokenType = tokenType; // 确保 tokenType 被正确设置
+      this.tokenType = tokenType || 'Bearer'; // 默认使用Bearer类型
 
       localStorage.setItem('token', token);
-      localStorage.setItem('tokenType', tokenType); // 保存 tokenType
+      localStorage.setItem('tokenType', this.tokenType);
     },
     
     async fetchProfile() {
@@ -75,11 +76,14 @@ export const useUserStore = defineStore('user', {
       try {
         const response = await api.auth.login({ username, password });
         
-        this.setToken(response.token, response.tokenType); // 添加 tokenType 参数
+        this.setToken(response.token, response.tokenType);
         
+        // 立即获取用户信息
         await this.fetchProfile();
+        
         return true;
       } catch (error) {
+        console.error('Login failed:', error);
         throw error;
       }
     },

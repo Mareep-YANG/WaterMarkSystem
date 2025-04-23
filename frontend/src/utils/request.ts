@@ -27,7 +27,7 @@ class Request {
       (config) => {
         const userStore = useUserStore();
         if (userStore.token) { 
-          config.headers.Authorization = `Bearer ${userStore.token}`;
+          config.headers.Authorization = `${userStore.tokenType} ${userStore.token}`;
         }
         // 添加时间戳防止缓存
         if (config.method === 'get') {

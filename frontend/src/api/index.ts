@@ -60,13 +60,25 @@ export const auth = {
   // 获取用户信息
   getProfile: async () => {
     try {
-      return await request.get('/auth/info');
+      const response = await request.get('/auth/info');
+      return response;
     } catch (error: any) {
       if (error.response?.status === 401) {
         throw new Error('Token无效或已过期');
       }
       throw error;
     }
+  },
+
+  // 上传头像
+  uploadAvatar: async (file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return request.post('/auth/avatar', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    });
   },
 };
 

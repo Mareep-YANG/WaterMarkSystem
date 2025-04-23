@@ -11,6 +11,7 @@ class User(Model):
 	email = fields.CharField(max_length=255, unique=True)
 	hashed_password = fields.CharField(max_length=255)
 	is_active = fields.BooleanField(default=True)
+	avatar = fields.CharField(max_length=255, null=True)
 	
 	class Meta:
 		table = "users"

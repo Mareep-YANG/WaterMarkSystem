@@ -1,7 +1,8 @@
 from datetime import timedelta
 from typing import Any
+import os
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
 from fastapi.security import OAuth2PasswordRequestForm as OAuth2Form
 from pydantic import BaseModel, EmailStr
 from tortoise.transactions import in_transaction
@@ -34,6 +35,7 @@ class UserResponse(BaseModel):
 	username: str
 	email: str
 	is_active: bool
+	avatar: str | None = None
 	
 	class Config:
 		from_attributes = True
@@ -116,4 +118,43 @@ async def get_info(current_user: User = Depends(get_current_active_user)) -> Any
 	"""
 	获取当前用户信息
 	"""
+	return current_user
+
+
+@router.post("/avatar", response_model=UserResponse)
+async def upload_avatar(
+	file: UploadFile = File(...),
+	current_user: User = Depends(get_current_active_user)
+):
+	if not file.content_type.startswith('image/'):
+		raise HTTPException(
+			status_code=status.HTTP_400_BAD_REQUEST,
+			detail="File must be an image"
+		)
+	
+	# 创建上传目录
+	upload_dir = os.path.join(cfg.UPLOAD_DIR, "avatars")
+	os.makedirs(upload_dir, exist_ok=True)
+	
+	# 生成文件名
+	file_extension = os.path.splitext(file.filename)[1]
+	filename = f"{current_user.id}{file_extension}"
+	file_path = os.path.join(upload_dir, filename)
+	
+	# 保存文件
+	try:
+		contents = await file.read()
+		with open(file_path, "wb") as f:
+			f.write(contents)
+	except Exception as e:
+		raise HTTPException(
+			status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+			detail=f"Could not upload file: {str(e)}"
+		)
+	
+	# 更新用户头像路径
+	avatar_url = f"/static/avatars/{filename}"
+	current_user.avatar = avatar_url
+	await current_user.save()
+	
 	return current_user

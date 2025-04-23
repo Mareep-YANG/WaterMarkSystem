@@ -123,7 +123,7 @@ interface ApiKey {
 }
 
 const userStore = useUserStore(); // 获取用户存储实例
-const user = computed(() => userStore.currentUser); // 计算属性，获取当前用户信息
+const user = computed(() => userStore.profile); // 计算属性，获取当前用户信息
 
 const apiKeys = ref<ApiKey[]>([]); // API密钥列表
 const newApiKey = ref(''); // 新创建的API密钥
@@ -207,7 +207,12 @@ const copyApiKey = () => {
 };
 
 onMounted(async () => {
-  await fetchApiKeys(); // 组件挂载时获取API密钥列表
+  try {
+    await userStore.fetchProfile();
+    await fetchApiKeys();
+  } catch (error) {
+    ElMessage.error('获取用户信息失败');
+  }
 });
 </script>
 

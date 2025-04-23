@@ -18,7 +18,7 @@ class Settings(BaseSettings):
 	CORS_ORIGINS: List[AnyHttpUrl] = ["http://localhost:3000", "http://127.0.0.1:3000"]
 	JWT_SECRET_KEY: str
 	ALGORITHM: str = "HS256"
-	ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
+	ACCESS_TOKEN_EXPIRE_MINUTES: int = 1440  # 24小时
 	
 	# 数据库设置
 	SQL_HOST: str = "localhost"
@@ -26,7 +26,7 @@ class Settings(BaseSettings):
 	SQL_USER: str
 	SQL_PASSWORD: SecretStr
 	SQL_DBNAME: str
-	
+	UPLOAD_DIR: str = "static/uploads"
 	# 模型配置
 	DEFAULT_MODEL: str = "facebook/opt-1.3b"
 	MODEL_CACHE_DIR: str = ".cache/models"
